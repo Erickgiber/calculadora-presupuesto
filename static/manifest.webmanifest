@@ -1,0 +1,26 @@
+{
+	"name": "MargenKo · Calculadora de precios",
+	"short_name": "MargenKo",
+	"description": "Calcula el precio justo de tus productos considerando materiales, mano de obra y ganancia.",
+	"lang": "es",
+	"start_url": "./",
+	"scope": "./",
+	"display": "standalone",
+	"orientation": "portrait",
+	"background_color": "#f5f2fb",
+	"theme_color": "#7157b1",
+	"icons": [
+		{
+			"src": "icons/icon-192.png",
+			"sizes": "192x192",
+			"type": "image/png",
+			"purpose": "any maskable"
+		},
+		{
+			"src": "icons/icon-512.png",
+			"sizes": "512x512",
+			"type": "image/png",
+			"purpose": "any maskable"
+		}
+	]
+}

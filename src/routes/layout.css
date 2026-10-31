@@ -64,25 +64,209 @@
 	color-scheme: dark;
 }
 
-body {
-	min-width: 320px;
-	min-height: 100dvh;
-	background: var(--color-page);
+@layer base {
+	html {
+		scroll-padding-block: 140px 110px;
+		-webkit-tap-highlight-color: transparent;
+		-webkit-text-size-adjust: 100%;
+	}
+
+	body {
+		min-width: 320px;
+		min-height: 100dvh;
+		background: var(--color-page);
+	}
+
+	button,
+	input {
+		font: inherit;
+		color: inherit;
+	}
+
+	button {
+		touch-action: manipulation;
+		user-select: none;
+	}
+
+	button:not(:disabled) {
+		cursor: pointer;
+	}
+
+	:focus-visible {
+		outline: 2px solid var(--color-brand-strong);
+		outline-offset: 2px;
+	}
 }
 
-button,
-input {
-	font: inherit;
-	color: inherit;
-}
+@layer components {
+	.field {
+		min-width: 0;
+		display: flex;
+		flex-direction: column;
+		gap: 6px;
+	}
 
-button:not(:disabled) {
-	cursor: pointer;
-}
+	.field-label {
+		padding: 0;
+		color: var(--color-text);
+		font-size: 15px;
+		font-weight: 500;
+	}
 
-:focus-visible {
-	outline: 2px solid var(--color-brand-strong);
-	outline-offset: 2px;
+	.field-hint {
+		color: var(--color-text-subtle);
+		font-size: 13px;
+		line-height: 1.45;
+	}
+
+	.control {
+		width: 100%;
+		min-width: 0;
+		height: var(--control-height);
+		border: 1px solid var(--color-border-strong);
+		border-radius: var(--radius-control);
+		background: var(--color-surface);
+		font-size: 16px;
+		font-variant-numeric: tabular-nums;
+		transition:
+			border-color 150ms ease,
+			box-shadow 150ms ease;
+	}
+
+	input.control {
+		padding: 0 14px;
+	}
+
+	.control::placeholder,
+	.control input::placeholder {
+		color: var(--color-placeholder);
+	}
+
+	.control:hover {
+		border-color: var(--color-brand);
+	}
+
+	.control:focus-within {
+		border-color: var(--color-brand-strong);
+		box-shadow: var(--focus-ring);
+		outline: none;
+	}
+
+	.control:has(:user-invalid),
+	input.control:user-invalid {
+		border-color: var(--color-danger);
+	}
+
+	.number-control {
+		display: flex;
+		align-items: center;
+		gap: 6px;
+		padding: 0 14px;
+	}
+
+	.number-control input {
+		width: 100%;
+		min-width: 0;
+		height: 100%;
+		border: 0;
+		background: transparent;
+		appearance: textfield;
+	}
+
+	.number-control input:focus-visible {
+		outline: none;
+	}
+
+	.number-control input::-webkit-inner-spin-button,
+	.number-control input::-webkit-outer-spin-button {
+		margin: 0;
+		appearance: none;
+	}
+
+	.affix {
+		flex: none;
+		color: var(--color-text-subtle);
+		font-size: 15px;
+	}
+
+	.card {
+		border: 1px solid var(--color-border);
+		border-radius: var(--radius-card);
+		background: var(--color-surface);
+		box-shadow: var(--shadow-card);
+	}
+
+	.button {
+		min-height: 48px;
+		padding: 0 20px;
+		border: 1px solid transparent;
+		border-radius: var(--radius-control);
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		gap: 8px;
+		font-size: 16px;
+		font-weight: 600;
+		white-space: nowrap;
+		transition:
+			background-color 150ms ease,
+			border-color 150ms ease,
+			transform 100ms ease;
+	}
+
+	.button:active:not(:disabled) {
+		transform: scale(0.98);
+	}
+
+	.button svg,
+	.icon-button svg {
+		width: 20px;
+		height: 20px;
+		flex: none;
+		fill: none;
+		stroke: currentColor;
+		stroke-linecap: round;
+		stroke-linejoin: round;
+		stroke-width: 1.8;
+	}
+
+	.button-primary {
+		background: var(--color-brand-strong);
+		color: var(--color-on-accent);
+	}
+
+	.button-primary:hover {
+		background: var(--color-brand-stronger);
+	}
+
+	.button-secondary {
+		border-color: var(--color-border-strong);
+		background: var(--color-surface);
+		color: var(--color-brand-strong);
+	}
+
+	.button-secondary:hover {
+		border-color: var(--color-brand);
+		background: var(--color-brand-soft);
+	}
+
+	.icon-button {
+		width: 44px;
+		height: 44px;
+		flex: none;
+		border-radius: var(--radius-control);
+		color: var(--color-text-subtle);
+		display: grid;
+		place-items: center;
+		transition:
+			background-color 150ms ease,
+			color 150ms ease;
+	}
+
+	.icon-button:disabled {
+		opacity: 0.35;
+		cursor: not-allowed;
+	}
 }
 
 @media (prefers-reduced-motion: no-preference) {
