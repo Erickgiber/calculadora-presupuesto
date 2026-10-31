@@ -1,0 +1,74 @@
+@import 'tailwindcss';
+@plugin '@tailwindcss/forms' {
+	strategy: 'class';
+}
+@plugin '@tailwindcss/typography';
+
+@font-face {
+	font-family: 'Instrument Sans:Medium';
+	src: url('https://static.figma.com/font/InstrumentSans_wdth_wght__1') format('woff2');
+	font-style: normal;
+	font-weight: 500;
+}
+
+@font-face {
+	font-family: 'Inter:Black';
+	src: url('https://static.figma.com/font/Inter_1') format('woff2');
+	font-style: normal;
+	font-weight: 900;
+}
+
+@font-face {
+	font-family: 'Inter:Light';
+	src: url('https://static.figma.com/font/Inter_1') format('woff2');
+	font-style: normal;
+	font-weight: 300;
+}
+
+@font-face {
+	font-family: 'Inter:Regular';
+	src: url('https://static.figma.com/font/Inter_1') format('woff2');
+	font-style: normal;
+	font-weight: 400;
+}
+
+@font-face {
+	font-family: 'Inter:Semi Bold';
+	src: url('https://static.figma.com/font/Inter_1') format('woff2');
+	font-style: normal;
+	font-weight: 600;
+}
+
+@font-face {
+	font-family: 'Kanit:Regular';
+	src: url('https://static.figma.com/font/Kanit-Regular_2') format('woff2');
+	font-style: normal;
+	font-weight: 400;
+}
+
+:root {
+	color: #16121c;
+	font-family: 'Inter:Regular', Arial, sans-serif;
+	font-synthesis: none;
+}
+
+body {
+	min-width: 320px;
+	min-height: 100dvh;
+	background: #8368c4;
+}
+
+button,
+input {
+	font: inherit;
+}
+
+button {
+	cursor: pointer;
+}
+
+button:focus-visible,
+input:focus-visible {
+	outline: 3px solid rgba(86, 58, 199, 0.28);
+	outline-offset: 2px;
+}
