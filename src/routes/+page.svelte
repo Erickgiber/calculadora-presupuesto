@@ -1,31 +1,36 @@
 <script lang="ts">
-	import { pushState } from '$app/navigation';
+	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
+	import { onMount, untrack } from 'svelte';
 	import { cubicOut } from 'svelte/easing';
 	import { prefersReducedMotion } from 'svelte/motion';
 	import { fly } from 'svelte/transition';
 	import type { Attachment } from 'svelte/attachments';
 	import { Budget, budgetSummary, money } from '#lib/budget.svelte.ts';
-	import { loadDraft, saveDraft } from '#lib/draft-storage.ts';
+	import { saveCalculation } from '#lib/calculation-history.ts';
+	import { loadCurrentDraft, newCalculationId, saveCurrentDraft } from '#lib/current-draft.ts';
+	import { shareSummary } from '#lib/share.ts';
 	import { INPUT_STEPS, STEPS, validateStep } from '#lib/steps.ts';
-	import BrandLogo from '#lib/components/BrandLogo.svelte';
-	import ConfirmSheet from '#lib/components/ConfirmSheet.svelte';
+	import { toast } from '#lib/toast.svelte.ts';
+	import AppBar from '#lib/components/AppBar.svelte';
 	import PriceBreakdown from '#lib/components/PriceBreakdown.svelte';
-	import ThemeToggle from '#lib/components/ThemeToggle.svelte';
 	import LaborStep from '#lib/components/steps/LaborStep.svelte';
 	import MaterialsStep from '#lib/components/steps/MaterialsStep.svelte';
 	import ProductStep from '#lib/components/steps/ProductStep.svelte';
 	import ProfitStep from '#lib/components/steps/ProfitStep.svelte';
 	import ResultStep from '#lib/components/steps/ResultStep.svelte';
 
-	const budget = new Budget(loadDraft());
+	const budget = new Budget();
 	const resultStepIndex = STEPS.length - 1;
 	const materialsStepIndex = STEPS.findIndex((step) => step.id === 'materials');
+	const calculatorHref = resolve('/');
+	const historyHref = resolve('/historial');
 
+	let isLoaded = $state(false);
+	let calculationId = $state(newCalculationId());
+	let savedCalculationId = $state<string | null>(null);
 	let attemptedStep = $state<number | null>(null);
-	let confirmingReset = $state(false);
-	let toastMessage = $state('');
-	let toastTimer: ReturnType<typeof setTimeout> | undefined;
 	let hasRenderedFirstStep = false;
 
 	const stepIndex = $derived(Math.min(Math.max(page.state.step ?? 0, 0), resultStepIndex));
@@ -37,7 +42,44 @@
 	const nextLabel = $derived(stepIndex === resultStepIndex - 1 ? 'Ver mi precio' : 'Continuar');
 	const motionDuration = $derived(prefersReducedMotion.current ? 0 : 260);
 
-	$effect(() => saveDraft(budget.toDraft()));
+	onMount(async () => {
+		try {
+			const current = await loadCurrentDraft();
+			if (current) {
+				budget.restore(current.draft);
+				calculationId = current.calculationId;
+			}
+		} catch (error) {
+			console.warn('No se pudo leer la base de datos local', error);
+			toast.show('No se pudo acceder al almacenamiento; tus datos no se guardarán');
+		}
+		isLoaded = true;
+	});
+
+	$effect(() => {
+		if (!isLoaded) {
+			return;
+		}
+		saveCurrentDraft({ calculationId, draft: budget.toDraft() }).catch((error: unknown) =>
+			console.warn('No se pudo guardar el borrador', error)
+		);
+	});
+
+	$effect(() => {
+		if (isLoaded && isResult && budget.hasCosts) {
+			untrack(recordInHistory);
+		}
+	});
+
+	async function recordInHistory() {
+		try {
+			const saved = await saveCalculation(calculationId, budget.toDraft(), budget.calculation);
+			savedCalculationId = saved.id;
+		} catch (error) {
+			console.warn('No se pudo guardar en el historial', error);
+			toast.show('No se pudo guardar en el historial');
+		}
+	}
 
 	const focusOnStepChange: Attachment<HTMLElement> = (heading) => {
 		if (!hasRenderedFirstStep) {
@@ -54,7 +96,7 @@
 			return;
 		}
 		attemptedStep = null;
-		pushState('', { step: stepIndex + 1 });
+		goto(calculatorHref, { state: { step: stepIndex + 1 }, shallow: true });
 	}
 
 	function goBack() {
@@ -69,6 +111,8 @@
 
 	function startOver() {
 		budget.reset();
+		calculationId = newCalculationId();
+		savedCalculationId = null;
 		attemptedStep = null;
 		goToStep(0);
 	}
@@ -91,32 +135,6 @@
 		form.addEventListener('keydown', moveToNextField);
 		return () => form.removeEventListener('keydown', moveToNextField);
 	};
-
-	async function shareResult() {
-		const text = budgetSummary(budget);
-		if (navigator.share) {
-			try {
-				await navigator.share({ title: 'Mi precio de venta', text });
-				return;
-			} catch (error) {
-				if (error instanceof DOMException && error.name === 'AbortError') {
-					return;
-				}
-			}
-		}
-		try {
-			await navigator.clipboard.writeText(text);
-			showToast('Resumen copiado al portapapeles');
-		} catch {
-			showToast('No se pudo copiar el resumen');
-		}
-	}
-
-	function showToast(message: string) {
-		toastMessage = message;
-		clearTimeout(toastTimer);
-		toastTimer = setTimeout(() => (toastMessage = ''), 2800);
-	}
 </script>
 
 <svelte:head>
@@ -127,31 +145,25 @@
 	/>
 </svelte:head>
 
-<div class="app">
-	<header class="app-bar">
-		<div class="app-bar-row">
-			{#if stepIndex > 0}
-				<button
-					type="button"
-					class="icon-button back-button"
-					onclick={goBack}
-					aria-label="Volver al paso anterior"
-					title="Volver"
-				>
-					<svg viewBox="0 0 24 24" aria-hidden="true">
-						<path d="M15 5l-7 7 7 7" />
-					</svg>
-				</button>
-				<p class="app-bar-title">{currentStep.label}</p>
-			{:else}
-				<BrandLogo />
-			{/if}
-			<div class="app-bar-actions">
-				<ThemeToggle />
-			</div>
-		</div>
+<div class="app-shell">
+	<AppBar
+		title={stepIndex > 0 ? currentStep.label : undefined}
+		onBack={stepIndex > 0 ? goBack : undefined}
+	>
+		{#snippet actions()}
+			<a
+				class="icon-button history-link"
+				href={historyHref}
+				aria-label="Historial de cálculos"
+				title="Historial"
+			>
+				<svg viewBox="0 0 24 24" aria-hidden="true">
+					<path d="M3.5 12a8.5 8.5 0 1 0 2.5-6M3.5 4v4h4M12 7.5V12l3 2" />
+				</svg>
+			</a>
+		{/snippet}
 		<nav class="progress" aria-label="Progreso">
-			<ol>
+			<ol class="app-container">
 				{#each INPUT_STEPS as step, index (step.id)}
 					<li>
 						<button
@@ -171,200 +183,136 @@
 				{/each}
 			</ol>
 		</nav>
-	</header>
+	</AppBar>
 
-	<div class="app-body" class:has-summary={!isResult}>
-		<main class="screen">
-			<form
-				id="step-form"
-				class="screen-form"
-				novalidate
-				onsubmit={(event) => {
-					event.preventDefault();
-					goNext();
-				}}
-				{@attach advanceFieldOnEnter}
-			>
-				{#key stepIndex}
-					<div in:fly={{ y: 16, duration: motionDuration, easing: cubicOut }}>
-						<header class="screen-header">
-							<p class="screen-kicker">
-								{isResult ? 'Listo' : `Paso ${stepIndex + 1} de ${INPUT_STEPS.length}`}
-							</p>
-							<h1 class="screen-title" tabindex="-1" {@attach focusOnStepChange}>
-								{currentStep.title}
-							</h1>
-							<p class="screen-description">{currentStep.description(budget)}</p>
-						</header>
+	{#if isLoaded}
+		<div class="app-body app-container" class:has-summary={!isResult}>
+			<main class="screen">
+				<form
+					id="step-form"
+					class="screen-form"
+					novalidate
+					onsubmit={(event) => {
+						event.preventDefault();
+						goNext();
+					}}
+					{@attach advanceFieldOnEnter}
+				>
+					{#key stepIndex}
+						<div in:fly={{ y: 16, duration: motionDuration, easing: cubicOut }}>
+							<header class="screen-header">
+								<p class="screen-kicker">
+									{isResult ? 'Listo' : `Paso ${stepIndex + 1} de ${INPUT_STEPS.length}`}
+								</p>
+								<h1 class="screen-title" tabindex="-1" {@attach focusOnStepChange}>
+									{currentStep.title}
+								</h1>
+								<p class="screen-description">{currentStep.description(budget)}</p>
+							</header>
 
-						{#if currentStep.id === 'product'}
-							<ProductStep {budget} />
-						{:else if currentStep.id === 'materials'}
-							<MaterialsStep {budget} />
-						{:else if currentStep.id === 'labor'}
-							<LaborStep {budget} />
-						{:else if currentStep.id === 'profit'}
-							<ProfitStep {budget} />
-						{:else if budget.hasCosts}
-							<ResultStep {budget} onEdit={goToStep} />
-						{:else}
-							<div class="card empty-result">
-								<p>Todavía no hay costos para calcular tu precio.</p>
-								<button
-									type="button"
-									class="button button-secondary"
-									onclick={() => goToStep(materialsStepIndex)}
-								>
-									Agregar costos
-								</button>
+							{#if currentStep.id === 'product'}
+								<ProductStep {budget} />
+							{:else if currentStep.id === 'materials'}
+								<MaterialsStep {budget} />
+							{:else if currentStep.id === 'labor'}
+								<LaborStep {budget} />
+							{:else if currentStep.id === 'profit'}
+								<ProfitStep {budget} />
+							{:else if budget.hasCosts}
+								<ResultStep
+									{budget}
+									savedToHistory={savedCalculationId === calculationId}
+									onEdit={goToStep}
+								/>
+							{:else}
+								<div class="card empty-result">
+									<p>Todavía no hay costos para calcular tu precio.</p>
+									<button
+										type="button"
+										class="button button-secondary"
+										onclick={() => goToStep(materialsStepIndex)}
+									>
+										Agregar costos
+									</button>
+								</div>
+							{/if}
+						</div>
+					{/key}
+
+					{#if stepError}
+						<p class="form-error" role="alert">
+							<svg viewBox="0 0 20 20" aria-hidden="true">
+								<circle cx="10" cy="10" r="7.5" />
+								<path d="M10 6.5v4M10 13.5v.01" />
+							</svg>
+							{stepError}
+						</p>
+					{/if}
+				</form>
+
+				<div class="action-bar">
+					{#if isResult}
+						<button type="button" class="button button-secondary" onclick={startOver}>
+							Nuevo cálculo
+						</button>
+						<button
+							type="button"
+							class="button button-primary"
+							onclick={() => shareSummary('Mi precio de venta', budgetSummary(budget))}
+							disabled={!budget.hasCosts}
+						>
+							<svg viewBox="0 0 24 24" aria-hidden="true">
+								<path d="M12 15V4M8 8l4-4 4 4M5 13v5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5" />
+							</svg>
+							Compartir
+						</button>
+					{:else}
+						{#if stepIndex > 0 && budget.hasCosts}
+							<div class="running-total">
+								<span>Precio estimado</span>
+								<strong>{money.format(budget.calculation.total)}</strong>
 							</div>
 						{/if}
-					</div>
-				{/key}
-
-				{#if stepError}
-					<p class="form-error" role="alert">
-						<svg viewBox="0 0 20 20" aria-hidden="true">
-							<circle cx="10" cy="10" r="7.5" />
-							<path d="M10 6.5v4M10 13.5v.01" />
-						</svg>
-						{stepError}
-					</p>
-				{/if}
-			</form>
-
-			<div class="action-bar">
-				{#if isResult}
-					<button
-						type="button"
-						class="button button-secondary"
-						onclick={() => (confirmingReset = true)}
-					>
-						Nuevo cálculo
-					</button>
-					<button
-						type="button"
-						class="button button-primary"
-						onclick={shareResult}
-						disabled={!budget.hasCosts}
-					>
-						<svg viewBox="0 0 24 24" aria-hidden="true">
-							<path d="M12 15V4M8 8l4-4 4 4M5 13v5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5" />
-						</svg>
-						Compartir
-					</button>
-				{:else}
-					{#if stepIndex > 0 && budget.hasCosts}
-						<div class="running-total">
-							<span>Precio estimado</span>
-							<strong>{money.format(budget.calculation.total)}</strong>
-						</div>
+						<button type="submit" form="step-form" class="button button-primary next-button">
+							{nextLabel}
+							<svg viewBox="0 0 24 24" aria-hidden="true">
+								<path d="M9 5l7 7-7 7" />
+							</svg>
+						</button>
 					{/if}
-					<button type="submit" form="step-form" class="button button-primary next-button">
-						{nextLabel}
-						<svg viewBox="0 0 24 24" aria-hidden="true">
-							<path d="M9 5l7 7-7 7" />
-						</svg>
-					</button>
-				{/if}
-			</div>
-		</main>
+				</div>
+			</main>
 
-		{#if !isResult}
-			<aside class="card live-summary" aria-labelledby="live-summary-title">
-				<h2 id="live-summary-title" class="live-title">Tu precio hasta ahora</h2>
-				{#if budget.hasCosts}
-					<p class="live-price">{money.format(budget.calculation.total)}</p>
-					<p class="live-unit">por unidad</p>
-					<PriceBreakdown calculation={budget.calculation} />
-				{:else}
-					<p class="live-empty">
-						Cuando agregues materiales o mano de obra, aquí verás cómo se forma tu precio.
-					</p>
-				{/if}
-			</aside>
-		{/if}
-	</div>
-</div>
-
-<ConfirmSheet
-	bind:open={confirmingReset}
-	title="¿Empezar un cálculo nuevo?"
-	message="Se borrarán los datos de este producto. Esta acción no se puede deshacer."
-	confirmLabel="Borrar y empezar"
-	onConfirm={startOver}
-/>
-
-<div class="toast-region" role="status" aria-live="polite">
-	{#if toastMessage}
-		<p class="toast" transition:fly={{ y: 16, duration: motionDuration, easing: cubicOut }}>
-			{toastMessage}
-		</p>
+			{#if !isResult}
+				<aside class="card live-summary" aria-labelledby="live-summary-title">
+					<h2 id="live-summary-title" class="live-title">Tu precio hasta ahora</h2>
+					{#if budget.hasCosts}
+						<p class="live-price">{money.format(budget.calculation.total)}</p>
+						<p class="live-unit">por unidad</p>
+						<PriceBreakdown calculation={budget.calculation} />
+					{:else}
+						<p class="live-empty">
+							Cuando agregues materiales o mano de obra, aquí verás cómo se forma tu precio.
+						</p>
+					{/if}
+				</aside>
+			{/if}
+		</div>
 	{/if}
 </div>
 
 <style>
-	.app {
-		--app-width: 1020px;
-		--gutter: 16px;
-
-		min-height: 100dvh;
-		display: flex;
-		flex-direction: column;
-	}
-
-	.app-bar {
-		position: sticky;
-		top: 0;
-		z-index: 20;
-		padding-top: env(safe-area-inset-top);
-		background: var(--color-brand-surface);
+	.history-link {
 		color: var(--color-brand-contrast);
 	}
 
-	.app-bar-row,
-	.progress ol,
-	.app-body {
-		width: min(100% - var(--gutter) * 2, var(--app-width));
-		margin-inline: auto;
-	}
-
-	.app-bar-row {
-		height: 56px;
-		display: flex;
-		align-items: center;
-		gap: 4px;
-	}
-
-	.back-button {
-		margin-left: -10px;
-		color: var(--color-on-brand);
-	}
-
-	.back-button:hover {
+	.history-link:hover {
 		background: rgba(255, 255, 255, 0.14);
 	}
 
-	.back-button svg {
-		width: 24px;
-		height: 24px;
-		stroke-width: 2;
-	}
-
-	.app-bar-title {
-		min-width: 0;
-		color: var(--color-on-brand);
-		font-family: var(--font-display);
-		font-size: 19px;
-		font-weight: 500;
-		overflow: hidden;
-		text-overflow: ellipsis;
-		white-space: nowrap;
-	}
-
-	.app-bar-actions {
-		margin-left: auto;
-		margin-right: -10px;
+	.history-link svg {
+		width: 22px;
+		height: 22px;
 	}
 
 	.progress ol {
@@ -603,38 +551,12 @@
 		line-height: 1.5;
 	}
 
-	.toast-region {
-		position: fixed;
-		inset: auto 0 calc(96px + env(safe-area-inset-bottom));
-		z-index: 30;
-		display: flex;
-		justify-content: center;
-		padding-inline: var(--gutter);
-		pointer-events: none;
-	}
-
-	.toast {
-		padding: 12px 18px;
-		border-radius: var(--radius-pill);
-		background: var(--color-text);
-		color: var(--color-page);
-		box-shadow: var(--shadow-raised);
-		font-size: 15px;
-		font-weight: 500;
-	}
-
 	@media (max-width: 559px) {
 		.progress-label {
 			position: absolute;
 			width: 1px;
 			height: 1px;
 			clip-path: inset(50%);
-		}
-	}
-
-	@media (min-width: 480px) {
-		.app {
-			--gutter: 24px;
 		}
 	}
 

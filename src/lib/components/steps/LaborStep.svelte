@@ -1,16 +1,49 @@
 <script lang="ts">
-	import { money, type Budget } from '#lib/budget.svelte.ts';
+	import { money, TIME_UNIT_SUFFIX, type Budget, type TimeUnit } from '#lib/budget.svelte.ts';
 	import NumberField from '../NumberField.svelte';
 
 	let { budget }: { budget: Budget } = $props();
+
+	const timeUnits: { value: TimeUnit; label: string }[] = [
+		{ value: 'hours', label: 'Horas' },
+		{ value: 'minutes', label: 'Minutos' }
+	];
+
+	const hoursFormat = new Intl.NumberFormat('es-MX', { maximumFractionDigits: 2 });
+
+	const showsHoursEquivalent = $derived(budget.timeUnit === 'minutes' && budget.laborHours > 0);
+	const hoursEquivalent = $derived(
+		`${hoursFormat.format(budget.laborHours)} ${budget.laborHours === 1 ? 'hora' : 'horas'}`
+	);
 </script>
 
 <div class="inputs">
 	<div class="field">
-		<label for="hours" class="field-label">
-			{budget.isBatch ? 'Horas para todo el lote' : 'Horas por pieza'}
+		<label for="labor-time" class="field-label">
+			{budget.isBatch ? 'Tiempo para todo el lote' : 'Tiempo por pieza'}
 		</label>
-		<NumberField id="hours" bind:value={budget.hours} suffix="h" />
+		<div class="time-control">
+			<NumberField
+				id="labor-time"
+				bind:value={budget.laborTime}
+				suffix={TIME_UNIT_SUFFIX[budget.timeUnit]}
+				aria-describedby={showsHoursEquivalent ? 'labor-time-hint' : undefined}
+			/>
+			<fieldset class="unit-switch">
+				<legend class="sr-only">Unidad de tiempo</legend>
+				{#each timeUnits as unit (unit.value)}
+					<label>
+						<input type="radio" name="time-unit" value={unit.value} bind:group={budget.timeUnit} />
+						<span>{unit.label}</span>
+					</label>
+				{/each}
+			</fieldset>
+		</div>
+		{#if showsHoursEquivalent}
+			<p id="labor-time-hint" class="field-hint">
+				Equivale a {hoursEquivalent}
+			</p>
+		{/if}
 	</div>
 	<div class="field">
 		<label for="hourly-rate" class="field-label">Valor de tu hora</label>
@@ -34,8 +67,71 @@
 <style>
 	.inputs {
 		display: grid;
-		grid-template-columns: repeat(2, minmax(0, 1fr));
-		gap: 12px;
+		grid-template-columns: minmax(0, 1fr);
+		gap: 20px;
+		align-items: start;
+	}
+
+	.time-control {
+		display: flex;
+		gap: 8px;
+	}
+
+	.time-control > :global(.number-control) {
+		flex: 1;
+	}
+
+	.unit-switch {
+		height: var(--control-height);
+		flex: none;
+		padding: 4px;
+		border-radius: var(--radius-control);
+		background: var(--color-brand-soft);
+		display: flex;
+		gap: 4px;
+	}
+
+	.unit-switch label {
+		position: relative;
+		display: flex;
+	}
+
+	.unit-switch input {
+		position: absolute;
+		inset: 0;
+		opacity: 0;
+		cursor: pointer;
+	}
+
+	.unit-switch span {
+		padding: 0 12px;
+		border-radius: 7px;
+		color: var(--color-text-muted);
+		display: grid;
+		place-items: center;
+		font-size: 14px;
+		font-weight: 500;
+		transition:
+			background-color 150ms ease,
+			color 150ms ease;
+	}
+
+	.unit-switch input:checked + span {
+		background: var(--color-surface-raised);
+		color: var(--color-brand-strong);
+		box-shadow: var(--shadow-segment);
+	}
+
+	.unit-switch input:focus-visible + span {
+		outline: 2px solid var(--color-brand-strong);
+		outline-offset: 1px;
+	}
+
+	@media (min-width: 560px) {
+		.inputs {
+			grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
+			gap: 12px;
+		}
 	}
 
 	.labor-total {

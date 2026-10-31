@@ -1,13 +1,15 @@
 <script lang="ts">
+	import { resolve } from '$app/paths';
 	import { money, type Budget } from '#lib/budget.svelte.ts';
 	import PriceBreakdown from '../PriceBreakdown.svelte';
 
 	type Props = {
 		budget: Budget;
+		savedToHistory: boolean;
 		onEdit: (stepIndex: number) => void;
 	};
 
-	let { budget, onEdit }: Props = $props();
+	let { budget, savedToHistory, onEdit }: Props = $props();
 
 	const calculation = $derived(budget.calculation);
 
@@ -30,7 +32,7 @@
 		},
 		{
 			label: 'Mano de obra',
-			value: `${Number(budget.hours) || 0} h × ${money.format(Number(budget.hourlyRate) || 0)}`
+			value: `${budget.laborTimeLabel} × ${money.format(Number(budget.hourlyRate) || 0)}/h`
 		},
 		{ label: 'Ganancia', value: `${calculation.profitRate}% sobre tu inversión` }
 	]);
@@ -49,6 +51,16 @@
 		</p>
 	{/if}
 </section>
+
+{#if savedToHistory}
+	<a class="saved-note" href={resolve('/historial')}>
+		<svg viewBox="0 0 20 20" aria-hidden="true">
+			<path d="M4.5 10.5l3.5 3.5 7.5-8" />
+		</svg>
+		<span>Guardado en tu historial</span>
+		<span class="saved-link">Ver historial</span>
+	</a>
+{/if}
 
 <section class="card panel" aria-labelledby="composition-title">
 	<h2 id="composition-title" class="panel-title">Así se forma tu precio</h2>
@@ -135,6 +147,42 @@
 		color: var(--color-on-brand);
 		font-variant-numeric: tabular-nums;
 		font-weight: 600;
+	}
+
+	.saved-note {
+		margin-top: 12px;
+		padding: 10px 14px;
+		border-radius: var(--radius-control);
+		background: var(--color-surface-muted);
+		color: var(--color-text-muted);
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		font-size: 14px;
+		text-decoration: none;
+		animation: fade 300ms ease;
+	}
+
+	.saved-note svg {
+		width: 18px;
+		height: 18px;
+		flex: none;
+		fill: none;
+		stroke: var(--color-profit);
+		stroke-linecap: round;
+		stroke-linejoin: round;
+		stroke-width: 2;
+	}
+
+	.saved-link {
+		margin-left: auto;
+		color: var(--color-brand-strong);
+		font-weight: 600;
+	}
+
+	.saved-note:hover .saved-link {
+		text-decoration: underline;
+		text-underline-offset: 3px;
 	}
 
 	.panel,
@@ -243,6 +291,12 @@
 		color: var(--color-brand-strong);
 		font-size: 14px;
 		font-weight: 600;
+	}
+
+	@keyframes fade {
+		from {
+			opacity: 0;
+		}
 	}
 
 	@keyframes pop {

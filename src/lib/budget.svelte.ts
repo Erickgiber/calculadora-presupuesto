@@ -7,12 +7,22 @@ export type Material = {
 
 export type InvestmentMode = 'unit' | 'batch';
 
+export type TimeUnit = 'hours' | 'minutes';
+
+export const TIME_UNIT_SUFFIX: Record<TimeUnit, string> = {
+	hours: 'h',
+	minutes: 'min'
+};
+
+const MINUTES_PER_HOUR = 60;
+
 export type BudgetDraft = {
 	project: string;
 	mode: InvestmentMode;
 	batchSize: string;
 	materials: Material[];
-	hours: string;
+	laborTime: string;
+	timeUnit: TimeUnit;
 	hourlyRate: string;
 	profitPercent: string;
 };
@@ -39,7 +49,8 @@ function emptyDraft(): BudgetDraft {
 		mode: 'unit',
 		batchSize: '10',
 		materials: [emptyMaterial(1)],
-		hours: '',
+		laborTime: '',
+		timeUnit: 'hours',
 		hourlyRate: '',
 		profitPercent: RECOMMENDED_PROFIT_PERCENT
 	};
@@ -50,9 +61,15 @@ export class Budget {
 	mode = $state<InvestmentMode>('unit');
 	batchSize = $state('');
 	materials = $state<Material[]>([]);
-	hours = $state('');
+	laborTime = $state('');
+	timeUnit = $state<TimeUnit>('hours');
 	hourlyRate = $state('');
 	profitPercent = $state('');
+
+	laborHours = $derived.by(() => {
+		const laborTime = Number(this.laborTime) || 0;
+		return this.timeUnit === 'minutes' ? laborTime / MINUTES_PER_HOUR : laborTime;
+	});
 
 	calculation = $derived.by(() => {
 		const materialsTotal = this.materials.reduce(
@@ -61,7 +78,7 @@ export class Budget {
 		);
 		const units = this.mode === 'batch' ? Math.max(Number(this.batchSize) || 1, 1) : 1;
 		const materialUnit = materialsTotal / units;
-		const laborUnit = ((Number(this.hours) || 0) * (Number(this.hourlyRate) || 0)) / units;
+		const laborUnit = (this.laborHours * (Number(this.hourlyRate) || 0)) / units;
 		const investment = materialUnit + laborUnit;
 		const profitRate = Number(this.profitPercent) || 0;
 		const profit = investment * (profitRate / 100);
@@ -78,6 +95,7 @@ export class Budget {
 		};
 	});
 
+	laborTimeLabel = $derived(`${Number(this.laborTime) || 0} ${TIME_UNIT_SUFFIX[this.timeUnit]}`);
 	hasCosts = $derived(this.calculation.investment > 0);
 	isBatch = $derived(this.mode === 'batch');
 
@@ -90,7 +108,8 @@ export class Budget {
 		this.mode = draft.mode;
 		this.batchSize = draft.batchSize;
 		this.materials = draft.materials.length ? draft.materials : [emptyMaterial(1)];
-		this.hours = draft.hours;
+		this.laborTime = draft.laborTime;
+		this.timeUnit = draft.timeUnit;
 		this.hourlyRate = draft.hourlyRate;
 		this.profitPercent = draft.profitPercent;
 	}
@@ -105,7 +124,8 @@ export class Budget {
 			mode: this.mode,
 			batchSize: this.batchSize,
 			materials: $state.snapshot(this.materials),
-			hours: this.hours,
+			laborTime: this.laborTime,
+			timeUnit: this.timeUnit,
 			hourlyRate: this.hourlyRate,
 			profitPercent: this.profitPercent
 		};
@@ -124,6 +144,8 @@ export class Budget {
 	}
 }
 
+export type Calculation = Budget['calculation'];
+
 export function budgetSummary(budget: Budget) {
 	const { calculation } = budget;
 	const lines = [
@@ -140,7 +162,7 @@ export function budgetSummary(budget: Budget) {
 	lines.push(
 		'',
 		`Materiales: ${money.format(calculation.materialUnit)}`,
-		`Mano de obra: ${money.format(calculation.laborUnit)}`,
+		`Mano de obra (${budget.laborTimeLabel}): ${money.format(calculation.laborUnit)}`,
 		`Inversión por unidad: ${money.format(calculation.investment)}`,
 		`Ganancia (${calculation.profitRate}%): ${money.format(calculation.profit)}`
 	);

@@ -68,7 +68,7 @@ export function validateStep(budget: Budget, id: StepId): string | null {
 				? negativeValueError
 				: null;
 		case 'labor':
-			if (isNegative(budget.hours) || isNegative(budget.hourlyRate)) {
+			if (isNegative(budget.laborTime) || isNegative(budget.hourlyRate)) {
 				return negativeValueError;
 			}
 			return budget.hasCosts

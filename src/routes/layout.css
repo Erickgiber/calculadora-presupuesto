@@ -48,12 +48,20 @@
 	--focus-ring: 0 0 0 3px light-dark(rgba(113, 87, 177, 0.28), rgba(187, 166, 246, 0.35));
 
 	--control-height: 44px;
+	--app-width: 1020px;
+	--gutter: 16px;
 	--ease-out: cubic-bezier(0.22, 1, 0.36, 1);
 
 	color: var(--color-text);
 	font-family: var(--font-body);
 	font-synthesis: none;
 	-webkit-font-smoothing: antialiased;
+}
+
+@media (min-width: 480px) {
+	:root {
+		--gutter: 24px;
+	}
 }
 
 :root[data-theme='light'] {
@@ -248,6 +256,26 @@
 	.button-secondary:hover {
 		border-color: var(--color-brand);
 		background: var(--color-brand-soft);
+	}
+
+	.button-danger {
+		background: var(--color-danger);
+		color: var(--color-on-brand);
+	}
+
+	.button-danger:hover {
+		filter: brightness(0.95);
+	}
+
+	.app-shell {
+		min-height: 100dvh;
+		display: flex;
+		flex-direction: column;
+	}
+
+	.app-container {
+		width: min(100% - var(--gutter) * 2, var(--app-width));
+		margin-inline: auto;
 	}
 
 	.icon-button {
