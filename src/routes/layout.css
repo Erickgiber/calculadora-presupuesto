@@ -4,99 +4,71 @@
 }
 @plugin '@tailwindcss/typography';
 
+@font-face {
+	font-family: 'Instrument Sans:Medium';
+	src: url('https://static.figma.com/font/InstrumentSans_wdth_wght__1') format('woff2');
+	font-style: normal;
+	font-weight: 500;
+}
+
+@font-face {
+	font-family: 'Inter:Black';
+	src: url('https://static.figma.com/font/Inter_1') format('woff2');
+	font-style: normal;
+	font-weight: 900;
+}
+
+@font-face {
+	font-family: 'Inter:Light';
+	src: url('https://static.figma.com/font/Inter_1') format('woff2');
+	font-style: normal;
+	font-weight: 300;
+}
+
+@font-face {
+	font-family: 'Inter:Regular';
+	src: url('https://static.figma.com/font/Inter_1') format('woff2');
+	font-style: normal;
+	font-weight: 400;
+}
+
+@font-face {
+	font-family: 'Inter:Semi Bold';
+	src: url('https://static.figma.com/font/Inter_1') format('woff2');
+	font-style: normal;
+	font-weight: 600;
+}
+
+@font-face {
+	font-family: 'Kanit:Regular';
+	src: url('https://static.figma.com/font/Kanit-Regular_2') format('woff2');
+	font-style: normal;
+	font-weight: 400;
+}
+
 :root {
-	color-scheme: light dark;
-
-	--font-body: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
-	--font-display: 'Kanit', var(--font-body);
-
-	--color-page: light-dark(#f5f2fb, #121018);
-	--color-surface: light-dark(#ffffff, #1b1824);
-	--color-surface-muted: light-dark(#f7f4fc, #221e2d);
-	--color-surface-raised: light-dark(#ffffff, #352d4d);
-	--color-border: light-dark(#e4ddf1, #2e293b);
-	--color-border-strong: light-dark(#cbbfe5, #463e59);
-	--color-text: light-dark(#1c1726, #ece8f4);
-	--color-text-muted: light-dark(#5d566b, #b4acc4);
-	--color-text-subtle: light-dark(#6f6780, #988fa9);
-	--color-placeholder: light-dark(#9a92a9, #6c6580);
-	--color-brand: light-dark(#7157b1, #8f78d4);
-	--color-brand-surface: light-dark(#7157b1, #3f2f75);
-	--color-brand-strong: light-dark(#5a3ea8, #bba6f6);
-	--color-brand-stronger: light-dark(#48308c, #d0c1fa);
-	--color-brand-soft: light-dark(#efe9fb, #262036);
-	--color-brand-muted: light-dark(#ddd2f5, #3a3058);
-	--color-brand-contrast: #e8ddff;
-	--color-on-brand: #ffffff;
-	--color-on-accent: light-dark(#ffffff, #1a1330);
-	--color-profit: light-dark(#0b8a62, #4fd6a8);
-	--color-profit-fill: #34c497;
-	--color-labor-fill: light-dark(#ab95e3, #7a63bf);
-	--color-materials-fill: light-dark(#6a4fb0, #bba6f6);
-	--color-danger: light-dark(#c42b4a, #ff7d92);
-	--color-danger-soft: light-dark(#fbe9ed, #3b1f29);
-
-	--radius-control: 10px;
-	--radius-card: 16px;
-	--radius-pill: 999px;
-
-	--shadow-card:
-		0 1px 2px light-dark(rgba(28, 23, 38, 0.04), rgba(0, 0, 0, 0.3)),
-		0 4px 16px light-dark(rgba(54, 36, 99, 0.05), rgba(0, 0, 0, 0.2));
-	--shadow-raised: 0 12px 32px light-dark(rgba(54, 36, 99, 0.16), rgba(0, 0, 0, 0.5));
-	--shadow-segment: 0 1px 3px light-dark(rgba(54, 36, 99, 0.16), rgba(0, 0, 0, 0.4));
-	--focus-ring: 0 0 0 3px light-dark(rgba(113, 87, 177, 0.28), rgba(187, 166, 246, 0.35));
-
-	--control-height: 44px;
-	--ease-out: cubic-bezier(0.22, 1, 0.36, 1);
-
-	color: var(--color-text);
-	font-family: var(--font-body);
+	color: #16121c;
+	font-family: 'Inter:Regular', Arial, sans-serif;
 	font-synthesis: none;
-	-webkit-font-smoothing: antialiased;
-}
-
-:root[data-theme='light'] {
-	color-scheme: light;
-}
-
-:root[data-theme='dark'] {
-	color-scheme: dark;
 }
 
 body {
 	min-width: 320px;
 	min-height: 100dvh;
-	background: var(--color-page);
+	background: #8368c4;
 }
 
 button,
 input {
 	font: inherit;
-	color: inherit;
 }
 
-button:not(:disabled) {
+button {
 	cursor: pointer;
 }
 
-:focus-visible {
-	outline: 2px solid var(--color-brand-strong);
+button:focus-visible,
+input:focus-visible {
+	outline: 3px solid rgba(86, 58, 199, 0.28);
 	outline-offset: 2px;
-}
-
-@media (prefers-reduced-motion: no-preference) {
-	html {
-		scroll-behavior: smooth;
-	}
-}
-
-@media (prefers-reduced-motion: reduce) {
-	*,
-	::before,
-	::after {
-		animation-duration: 0.01ms !important;
-		animation-iteration-count: 1 !important;
-		transition-duration: 0.01ms !important;
-	}
 }

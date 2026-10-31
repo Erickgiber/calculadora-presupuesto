@@ -1,10 +1,13 @@
 <script lang="ts">
-	import { tick } from 'svelte';
-	import type { Attachment } from 'svelte/attachments';
 	import brandMarkBubble from '#lib/assets/brand/brand-mark-bubble.svg';
 	import brandMarkK from '#lib/assets/brand/brand-mark-k.svg';
 	import brandMarkO from '#lib/assets/brand/brand-mark-o.svg';
-	import ThemeToggle from '#lib/components/ThemeToggle.svelte';
+	import clockIcon from '#lib/assets/icons/clock.svg';
+	import lightbulbIcon from '#lib/assets/icons/lightbulb.svg';
+	import menuIcon from '#lib/assets/icons/menu.svg';
+	import moreInformationIcon from '#lib/assets/icons/more-information.svg';
+	import piggyBankIcon from '#lib/assets/icons/piggy-bank.svg';
+	import stepBadge from '#lib/assets/icons/step-badge.svg';
 
 	type Material = {
 		id: number;
@@ -19,9 +22,8 @@
 
 	type NumberFieldProps = {
 		value: string;
+		ariaLabel: string;
 		onValueChange: (value: string) => void;
-		id?: string;
-		ariaLabel?: string;
 		placeholder?: string;
 		prefix?: string;
 		suffix?: string;
@@ -46,11 +48,13 @@
 	let hours = $state('');
 	let hourlyRate = $state('');
 	let profitPercent = $state(recommendedProfitPercent);
-	let resultsInView = $state(false);
-	let resultsElement = $state<HTMLElement>();
+	let showResult = $state(false);
 
 	const calculation = $derived.by(() => {
-		const materialsTotal = materials.reduce((total, item) => total + materialSubtotal(item), 0);
+		const materialsTotal = materials.reduce(
+			(total, item) => total + (Number(item.quantity) || 0) * (Number(item.price) || 0),
+			0
+		);
 		const units = mode === 'batch' ? Math.max(Number(batchSize) || 1, 1) : 1;
 		const materialUnit = materialsTotal / units;
 		const laborUnit = ((Number(hours) || 0) * (Number(hourlyRate) || 0)) / units;
@@ -58,9 +62,6 @@
 		const profit = investment * ((Number(profitPercent) || 0) / 100);
 
 		return {
-			units,
-			materialsTotal,
-			materialUnit,
 			laborUnit,
 			investment,
 			profit,
@@ -69,37 +70,39 @@
 	});
 
 	const hasData = $derived(calculation.investment > 0);
-	const isBatch = $derived(mode === 'batch');
-	const isRecommendedProfit = $derived(Number(profitPercent) === Number(recommendedProfitPercent));
-	const showPriceBar = $derived(hasData && !resultsInView);
+	const chartMax = $derived(Math.max(calculation.total, 1));
 
-	const priceSegments = $derived([
-		{ label: 'Materiales', value: calculation.materialUnit, className: 'materials' },
-		{ label: 'Mano de obra', value: calculation.laborUnit, className: 'labor' },
-		{ label: 'Ganancia', value: calculation.profit, className: 'profit' }
+	const priceBars = $derived([
+		{ label: 'Inversión', value: calculation.investment, className: 'investment' },
+		{ label: 'Ganancia', value: calculation.profit, className: 'profit' },
+		{ label: 'Precio total', value: calculation.total, className: 'total' }
 	]);
 
-	const trackVisibility: Attachment<HTMLElement> = (element) => {
-		const observer = new IntersectionObserver(([entry]) => (resultsInView = entry.isIntersecting), {
-			threshold: 0.2
-		});
-		observer.observe(element);
-		return () => observer.disconnect();
-	};
+	function invalidateResult() {
+		showResult = false;
+	}
 
-	function materialSubtotal(material: Material) {
-		return (Number(material.quantity) || 0) * (Number(material.price) || 0);
+	function formatResult(value: number) {
+		return money.format(showResult ? value : 0);
+	}
+
+	function selectMode(nextMode: InvestmentMode) {
+		mode = nextMode;
+		invalidateResult();
 	}
 
 	function updateMaterial(material: Material, field: MaterialField, value: string) {
 		material[field] = value;
+		invalidateResult();
 	}
 
-	async function addMaterial() {
-		const id = Math.max(0, ...materials.map((item) => item.id)) + 1;
-		materials.push({ id, name: '', quantity: '', price: '' });
-		await tick();
-		document.getElementById(materialNameId(id))?.focus();
+	function addMaterial() {
+		materials.push({
+			id: Math.max(0, ...materials.map((item) => item.id)) + 1,
+			name: '',
+			quantity: '',
+			price: ''
+		});
 	}
 
 	function removeMaterial(id: number) {
@@ -110,18 +113,11 @@
 
 	function applyRecommendation() {
 		profitPercent = recommendedProfitPercent;
-	}
-
-	function showPriceDetails() {
-		resultsElement?.scrollIntoView({ block: 'start' });
+		invalidateResult();
 	}
 
 	function materialLabel(material: Material, index: number) {
 		return material.name || `material ${index + 1}`;
-	}
-
-	function materialNameId(id: number) {
-		return `material-name-${id}`;
 	}
 </script>
 
@@ -133,417 +129,346 @@
 	/>
 </svelte:head>
 
-{#snippet stepHeader(step: number, id: string, title: string, description: string)}
-	<header class="step-header">
-		<span class="step-number" aria-hidden="true">{step}</span>
-		<div>
-			<h2 {id} class="step-title"><span class="sr-only">Paso {step}: </span>{title}</h2>
-			<p class="step-description">{description}</p>
-		</div>
-	</header>
+{#snippet stepTitle(step: number, title: string, subtitle?: string)}
+	<div class="step-title">
+		<span class="step-number">
+			<img src={stepBadge} alt="" />
+			<b>{step}</b>
+		</span>
+		<span>
+			<strong>{title}</strong>
+			{#if subtitle}
+				<small>{subtitle}</small>
+			{/if}
+		</span>
+	</div>
 {/snippet}
 
 {#snippet numberField({
 	value,
-	onValueChange,
-	id,
 	ariaLabel,
+	onValueChange,
 	placeholder = '0',
 	prefix,
 	suffix
 }: NumberFieldProps)}
-	<div class="control number-control">
+	<label class="number-field">
 		{#if prefix}
-			<span class="affix" aria-hidden="true">{prefix}</span>
+			<span>{prefix}</span>
 		{/if}
 		<input
-			{id}
 			type="number"
-			inputmode="decimal"
 			min="0"
-			step="any"
+			step="0.01"
 			{value}
 			{placeholder}
 			aria-label={ariaLabel}
-			oninput={(event) => onValueChange(event.currentTarget.value)}
+			oninput={(event) => {
+				onValueChange(event.currentTarget.value);
+				invalidateResult();
+			}}
 		/>
 		{#if suffix}
-			<span class="affix" aria-hidden="true">{suffix}</span>
+			<span>{suffix}</span>
 		{/if}
-	</div>
+	</label>
 {/snippet}
 
-<div class="app-shell">
+<main class="app-shell">
 	<header class="topbar">
-		<div class="topbar-inner">
-			<div class="brand">
-				<span class="sr-only">MargenKo</span>
-				<span aria-hidden="true">Margen</span>
-				<span class="brand-mark" aria-hidden="true">
-					<img src={brandMarkBubble} alt="" />
-					<img src={brandMarkK} alt="" />
-					<img src={brandMarkO} alt="" />
-					<b>Ko</b>
-				</span>
-			</div>
-			<ThemeToggle />
+		<div class="brand" aria-label="MargenKo">
+			<span>Margen</span>
+			<span class="brand-mark">
+				<img src={brandMarkBubble} alt="" />
+				<img src={brandMarkK} alt="" />
+				<img src={brandMarkO} alt="" />
+				<b>Ko</b>
+			</span>
 		</div>
+		<button type="button" class="menu-button" aria-label="Abrir menú">
+			<img src={menuIcon} alt="" />
+		</button>
 	</header>
 
-	<main class="page" class:has-price-bar={hasData}>
+	<div class="page">
 		<section class="intro">
 			<p class="eyebrow">Fijación de precio de venta</p>
 			<h1>Calcula el precio justo de tu producto</h1>
 			<p class="intro-copy">
-				Completa los cuatro pasos para recuperar tu inversión, pagar tu trabajo y obtener la
-				ganancia que deseas. El resultado se actualiza mientras escribes.
+				Sigue los pasos para recuperar tu inversión, pagar tu trabajo y obtener la ganancia que
+				deseas.
 			</p>
 		</section>
 
 		<div class="workspace">
 			<div class="form-column">
-				<section class="card" aria-labelledby="step-product">
-					{@render stepHeader(
-						1,
-						'step-product',
-						'Tu producto',
-						'Ponle nombre y elige cómo lo fabricas.'
-					)}
-					<div class="product-grid">
-						<div class="field">
-							<label for="project" class="field-label">
-								Nombre del producto <span class="optional">(opcional)</span>
-							</label>
-							<input
-								id="project"
-								class="control"
-								bind:value={project}
-								placeholder="Ej. Velas artesanales"
-								autocomplete="off"
-							/>
-						</div>
-						<fieldset class="field">
-							<legend class="field-label">¿Cómo lo produces?</legend>
-							<div class="segmented">
-								<label>
-									<input type="radio" name="mode" value="unit" bind:group={mode} />
-									<span>Producto individual</span>
-								</label>
-								<label>
-									<input type="radio" name="mode" value="batch" bind:group={mode} />
-									<span>Por lote</span>
-								</label>
-							</div>
-						</fieldset>
+				<section class="card investment-card">
+					<div class="investment-heading">
+						<label for="project">¿En qué vas a invertir?</label>
+						<span class="tip">
+							Consejo <img src={lightbulbIcon} alt="" />
+						</span>
 					</div>
-					{#if isBatch}
-						<div class="field batch-field">
-							<label for="batch-size" class="field-label">¿Cuántas unidades produce el lote?</label>
-							{@render numberField({
-								id: 'batch-size',
-								value: batchSize,
-								placeholder: '1',
-								suffix: 'uds.',
-								onValueChange: (value) => (batchSize = value)
-							})}
-						</div>
-					{/if}
-					<p class="hint">
-						{isBatch
-							? 'Registra los costos de todo el lote; los dividiremos entre las unidades para darte el precio de cada una.'
-							: 'Registra los costos de una sola pieza; el resultado será el precio de cada unidad.'}
-					</p>
-				</section>
-
-				<section class="card" aria-labelledby="step-materials">
-					{@render stepHeader(
-						2,
-						'step-materials',
-						isBatch ? 'Materiales del lote' : 'Materiales por unidad',
-						isBatch
-							? 'Anota la compra completa de cada material: cantidad y precio unitario.'
-							: 'Anota cada material, la cantidad que usas y su precio unitario.'
-					)}
-					<div class="materials-header" aria-hidden="true">
-						<span>Material</span>
-						<span>Cantidad</span>
-						<span>Precio unitario</span>
-						<span class="align-end">Subtotal</span>
-						<span></span>
-					</div>
-					<ul class="materials-list">
-						{#each materials as item, index (item.id)}
-							<li class="material-row">
-								<input
-									id={materialNameId(item.id)}
-									class="control material-name"
-									value={item.name}
-									oninput={(event) => updateMaterial(item, 'name', event.currentTarget.value)}
-									placeholder="Ej. Cera de soya"
-									aria-label={`Material ${index + 1}`}
-									autocomplete="off"
-								/>
-								<div class="material-cell">
-									<span class="cell-label" aria-hidden="true">Cantidad</span>
-									{@render numberField({
-										value: item.quantity,
-										ariaLabel: `Cantidad de ${materialLabel(item, index)}`,
-										onValueChange: (value) => updateMaterial(item, 'quantity', value)
-									})}
-								</div>
-								<div class="material-cell">
-									<span class="cell-label" aria-hidden="true">Precio unitario</span>
-									{@render numberField({
-										value: item.price,
-										ariaLabel: `Precio de ${materialLabel(item, index)}`,
-										placeholder: '0.00',
-										prefix: '$',
-										onValueChange: (value) => updateMaterial(item, 'price', value)
-									})}
-								</div>
-								<div class="material-cell material-subtotal">
-									<span class="cell-label" aria-hidden="true">Subtotal</span>
-									<output aria-label={`Subtotal de ${materialLabel(item, index)}`}>
-										{money.format(materialSubtotal(item))}
-									</output>
-								</div>
-								<button
-									type="button"
-									class="icon-button"
-									onclick={() => removeMaterial(item.id)}
-									aria-label={`Eliminar ${materialLabel(item, index)}`}
-									title={materials.length === 1
-										? 'Necesitas al menos un material'
-										: 'Eliminar material'}
-									disabled={materials.length === 1}
-								>
-									<svg viewBox="0 0 20 20" aria-hidden="true">
-										<path d="M5 5l10 10M15 5L5 15" />
-									</svg>
-								</button>
-							</li>
-						{/each}
-					</ul>
-					<div class="materials-footer">
-						<button type="button" class="ghost-button" onclick={addMaterial}>
-							<svg viewBox="0 0 20 20" aria-hidden="true">
-								<path d="M10 4v12M4 10h12" />
-							</svg>
-							Agregar material
-						</button>
-						<p class="materials-total">
-							{isBatch ? 'Total del lote' : 'Total de materiales'}
-							<strong>{money.format(calculation.materialsTotal)}</strong>
-						</p>
-					</div>
-				</section>
-
-				<section class="card" aria-labelledby="step-labor">
-					{@render stepHeader(
-						3,
-						'step-labor',
-						'Mano de obra',
-						isBatch
-							? 'El tiempo total que te toma producir el lote y cuánto vale tu hora.'
-							: 'El tiempo que te toma hacer una unidad y cuánto vale tu hora.'
-					)}
-					<div class="labor-grid">
-						<div class="field">
-							<label for="hours" class="field-label">Horas dedicadas</label>
-							{@render numberField({
-								id: 'hours',
-								value: hours,
-								suffix: 'h',
-								onValueChange: (value) => (hours = value)
-							})}
-						</div>
-						<span class="operator" aria-hidden="true">×</span>
-						<div class="field">
-							<label for="hourly-rate" class="field-label">Valor de tu hora</label>
-							{@render numberField({
-								id: 'hourly-rate',
-								value: hourlyRate,
-								placeholder: '0.00',
-								prefix: '$',
-								onValueChange: (value) => (hourlyRate = value)
-							})}
-						</div>
-						<span class="operator" aria-hidden="true">=</span>
-						<div class="field labor-total">
-							<span id="labor-total-label" class="field-label">
-								Tu trabajo{isBatch ? ' por unidad' : ''}
-							</span>
-							<output class="control control-readonly" aria-labelledby="labor-total-label">
-								{money.format(calculation.laborUnit)}
-							</output>
-						</div>
-					</div>
-				</section>
-
-				<section class="card" aria-labelledby="step-profit">
-					{@render stepHeader(
-						4,
-						'step-profit',
-						'Ganancia',
-						'El porcentaje que sumas sobre tu inversión para que tu negocio crezca.'
-					)}
-					<div class="profit-layout">
-						<div class="field profit-field">
-							<label for="profit-percent" class="field-label">Porcentaje de ganancia</label>
-							{@render numberField({
-								id: 'profit-percent',
-								value: profitPercent,
-								suffix: '%',
-								onValueChange: (value) => (profitPercent = value)
-							})}
-						</div>
-						<div class="recommendation">
-							<p>
-								<strong>Recomendado: {recommendedProfitPercent}%</strong>
-								Un punto de partida saludable para cubrir imprevistos y crecer.
-							</p>
+					<div class="investment-controls">
+						<input id="project" bind:value={project} placeholder="Ej. Velas artesanales" />
+						<div class="mode-switch" aria-label="Tipo de inversión">
 							<button
 								type="button"
-								class="ghost-button"
-								onclick={applyRecommendation}
-								disabled={isRecommendedProfit}
+								class:active={mode === 'unit'}
+								onclick={() => selectMode('unit')}
 							>
-								{#if isRecommendedProfit}
-									<svg viewBox="0 0 20 20" aria-hidden="true">
-										<path d="M4.5 10.5l3.5 3.5 7.5-8" />
-									</svg>
-									Aplicado
-								{:else}
-									Usar {recommendedProfitPercent}%
-								{/if}
+								Producto individual
+							</button>
+							<button
+								type="button"
+								class:active={mode === 'batch'}
+								onclick={() => selectMode('batch')}
+							>
+								Por lote
 							</button>
 						</div>
 					</div>
+					<p class="helper">Calcula siempre el precio de una unidad.</p>
+					{#if mode === 'batch'}
+						<label class="batch-field">
+							¿Cuántas unidades produce el lote?
+							{@render numberField({
+								value: batchSize,
+								ariaLabel: 'Unidades producidas por lote',
+								suffix: 'uds.',
+								onValueChange: (value) => (batchSize = value)
+							})}
+						</label>
+					{/if}
+				</section>
+
+				<section class="card materials-card">
+					{@render stepTitle(
+						1,
+						'Materiales para una unidad',
+						mode === 'batch'
+							? 'Registra la compra completa; dividiremos el costo entre las unidades'
+							: 'Agrega cada material, la cantidad que usas y su precio'
+					)}
+					<div class="materials-header" aria-hidden="true">
+						<span>#</span>
+						<span>Material</span>
+						<span>Cantidad</span>
+						<span>Precio</span>
+						<span></span>
+					</div>
+					<div class="materials-list">
+						{#each materials as item, index (item.id)}
+							<div class="material-row">
+								<b>{index + 1}</b>
+								<input
+									value={item.name}
+									oninput={(event) => updateMaterial(item, 'name', event.currentTarget.value)}
+									placeholder="Ej. Cera"
+									aria-label={`Material ${index + 1}`}
+								/>
+								<input
+									type="number"
+									min="0"
+									step="0.01"
+									value={item.quantity}
+									oninput={(event) => updateMaterial(item, 'quantity', event.currentTarget.value)}
+									placeholder="0"
+									aria-label={`Cantidad de ${materialLabel(item, index)}`}
+								/>
+								<label class="price-input">
+									<span>$</span>
+									<input
+										type="number"
+										min="0"
+										step="0.01"
+										value={item.price}
+										oninput={(event) => updateMaterial(item, 'price', event.currentTarget.value)}
+										placeholder="0.00"
+										aria-label={`Precio de ${materialLabel(item, index)}`}
+									/>
+								</label>
+								<button
+									type="button"
+									class="remove-button"
+									onclick={() => removeMaterial(item.id)}
+									aria-label={`Eliminar material ${index + 1}`}
+									disabled={materials.length === 1}
+								>
+									×
+								</button>
+							</div>
+						{/each}
+					</div>
+					<button type="button" class="secondary-button" onclick={addMaterial}>
+						<span>+</span> Agregar material
+					</button>
+				</section>
+
+				<section class="card labor-card">
+					{@render stepTitle(2, 'Mano de obra (tu trabajo)')}
+					<div class="labor-grid">
+						<label>
+							<span>
+								Horas dedicadas <img src={clockIcon} alt="" />
+							</span>
+							{@render numberField({
+								value: hours,
+								ariaLabel: 'Horas dedicadas',
+								suffix: 'h',
+								onValueChange: (value) => (hours = value)
+							})}
+						</label>
+						<span class="operator">×</span>
+						<label>
+							<span>Valor de tu hora</span>
+							{@render numberField({
+								value: hourlyRate,
+								ariaLabel: 'Valor por hora',
+								prefix: '$',
+								onValueChange: (value) => (hourlyRate = value)
+							})}
+						</label>
+						<span class="operator">=</span>
+						<div class="calculated-field">
+							<span>Tu trabajo</span>
+							<strong>{money.format(calculation.laborUnit)}</strong>
+						</div>
+					</div>
+				</section>
+
+				<section class="card profit-card">
+					{@render stepTitle(3, 'Define tu ganancia')}
+					<div class="recommendation">
+						<div>
+							<strong>Margen recomendado: {recommendedProfitPercent}%</strong>
+							<p>Un punto de partida saludable para cubrir imprevistos y crecer.</p>
+						</div>
+						<button type="button" onclick={applyRecommendation}>
+							Usar {recommendedProfitPercent}%
+						</button>
+					</div>
+					<label class="profit-field">
+						Porcentaje de ganancia
+						{@render numberField({
+							value: profitPercent,
+							ariaLabel: 'Porcentaje de ganancia',
+							suffix: '%',
+							onValueChange: (value) => (profitPercent = value)
+						})}
+					</label>
+					<button
+						type="button"
+						class="primary-button"
+						onclick={() => (showResult = true)}
+						disabled={!hasData}
+					>
+						Calcular mi precio
+					</button>
+					{#if !hasData}
+						<small class="empty-note">Agrega al menos un costo para calcular.</small>
+					{/if}
 				</section>
 			</div>
 
-			<aside
-				class="results"
-				aria-labelledby="results-title"
-				bind:this={resultsElement}
-				{@attach trackVisibility}
-			>
-				<div class="results-hero">
-					<h2 id="results-title" class="results-label">Precio de venta sugerido</h2>
-					{#if project}
-						<p class="results-project">{project}</p>
-					{/if}
-					<p class="results-price" class:is-empty={!hasData}>
-						{money.format(calculation.total)}
-					</p>
-					<p class="results-unit">
-						por unidad
-						{#if isBatch && hasData}
-							<span class="results-batch">
-								Lote de {calculation.units} uds.:
-								<strong>{money.format(calculation.total * calculation.units)}</strong>
-							</span>
-						{/if}
-					</p>
+			<aside class="results-card" class:is-ready={showResult}>
+				<div class="results-heading">
+					<div>
+						<p>Tu precio sugerido</p>
+						<h2>{formatResult(calculation.total)}</h2>
+						<span>por unidad</span>
+					</div>
+					<img src={piggyBankIcon} alt="" />
 				</div>
 
-				{#if hasData}
-					<div class="results-body">
-						<h3 class="results-subtitle">Así se forma tu precio</h3>
-						<div class="composition-bar" aria-hidden="true">
-							{#each priceSegments as segment (segment.label)}
-								<span
-									class="segment {segment.className}"
-									style:width="{(segment.value / calculation.total) * 100}%"
-								></span>
-							{/each}
+				<div class="summary">
+					<div>
+						<span>Inversión por unidad</span>
+						<strong>{formatResult(calculation.investment)}</strong>
+					</div>
+					<div>
+						<span>Tu ganancia</span>
+						<strong>{formatResult(calculation.profit)}</strong>
+					</div>
+				</div>
+
+				<div class="chart">
+					<div class="chart-title">
+						<div>
+							<h3>Así se forma tu precio</h3>
+							<p>Comparación por unidad</p>
 						</div>
-						<dl class="breakdown">
-							<div class="breakdown-row">
-								<dt><span class="swatch materials"></span>Materiales</dt>
-								<dd>{money.format(calculation.materialUnit)}</dd>
-							</div>
-							<div class="breakdown-row">
-								<dt><span class="swatch labor"></span>Mano de obra</dt>
-								<dd>{money.format(calculation.laborUnit)}</dd>
-							</div>
-							<div class="breakdown-row is-subtotal">
-								<dt>Inversión por unidad</dt>
-								<dd>{money.format(calculation.investment)}</dd>
-							</div>
-							<div class="breakdown-row">
-								<dt>
-									<span class="swatch profit"></span>Ganancia ({Number(profitPercent) || 0}%)
-								</dt>
-								<dd class="is-profit">+{money.format(calculation.profit)}</dd>
-							</div>
-							<div class="breakdown-row is-total">
-								<dt>Precio de venta</dt>
-								<dd>{money.format(calculation.total)}</dd>
-							</div>
-						</dl>
+						<img src={moreInformationIcon} alt="" />
 					</div>
-				{:else}
-					<div class="results-empty">
-						<p class="results-empty-title">Tu precio aparecerá aquí</p>
-						<p>
-							Agrega el costo de al menos un material o de tu mano de obra y verás el resultado al
-							instante.
-						</p>
-					</div>
+					{#each priceBars as bar (bar.label)}
+						<div class="bar-row">
+							<span>{bar.label}</span>
+							<div class="bar-track">
+								<div
+									class="bar-fill {bar.className}"
+									style:width="{showResult ? (bar.value / chartMax) * 100 : 0}%"
+								></div>
+							</div>
+							<strong>{formatResult(bar.value)}</strong>
+						</div>
+					{/each}
+				</div>
+
+				<div class="formula">
+					<span>{formatResult(calculation.investment)}</span>
+					<b>+</b>
+					<span>{formatResult(calculation.profit)}</span>
+					<b>=</b>
+					<strong>{formatResult(calculation.total)}</strong>
+					<small>Inversión</small>
+					<i></i>
+					<small>Ganancia</small>
+					<i></i>
+					<small>Precio final</small>
+				</div>
+				{#if project && showResult}
+					<p class="result-project">
+						Presupuesto para: <strong>{project}</strong>
+					</p>
 				{/if}
 			</aside>
 		</div>
-	</main>
-
-	<div class="price-bar" class:is-visible={showPriceBar} inert={!showPriceBar}>
-		<div class="price-bar-summary">
-			<span>Precio sugerido</span>
-			<strong>{money.format(calculation.total)}</strong>
-		</div>
-		<button type="button" class="primary-button" onclick={showPriceDetails}>Ver desglose</button>
 	</div>
-</div>
+</main>
 
 <style>
 	.app-shell {
 		min-height: 100dvh;
-		background: linear-gradient(180deg, var(--color-brand-soft) 0, var(--color-page) 520px);
+		background:
+			radial-gradient(circle at 82% 18%, rgba(255, 255, 255, 0.52), transparent 24rem),
+			linear-gradient(180deg, #eee8ff 0%, #d8caf6 34%, #8063c0 100%);
 	}
 
 	.topbar {
-		border-radius: 0 0 24px 24px;
-		background: var(--color-brand-surface);
-	}
-
-	.topbar-inner,
-	.page {
-		width: min(1180px, 100% - 48px);
-		margin-inline: auto;
-	}
-
-	.topbar-inner {
-		height: 76px;
+		height: 110px;
+		padding: 0 clamp(18px, 5vw, 52px);
+		border-radius: 0 0 30px 30px;
+		background: #7157b1;
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
 	}
 
 	.brand {
-		color: var(--color-brand-contrast);
+		color: #e8ddff;
 		display: flex;
 		align-items: center;
-		font-family: var(--font-display);
-		font-size: 34px;
-		letter-spacing: -0.06em;
+		font-family: 'Kanit:Regular', sans-serif;
+		font-size: 40px;
+		letter-spacing: -2.4px;
 		line-height: 1;
 	}
 
 	.brand-mark {
 		position: relative;
-		width: 1.1em;
-		height: 1.05em;
-		margin-left: 0.05em;
+		width: 44px;
+		height: 42px;
+		margin-left: 2px;
 	}
 
 	.brand-mark img {
@@ -551,69 +476,87 @@
 	}
 
 	.brand-mark img:nth-child(1) {
-		width: 0.95em;
+		width: 38px;
 		left: 0;
-		top: 0.025em;
+		top: 1px;
 	}
 
 	.brand-mark img:nth-child(2) {
-		width: 0.675em;
-		left: 0.325em;
+		width: 27px;
+		left: 13px;
 		top: 0;
 	}
 
 	.brand-mark img:nth-child(3) {
-		width: 0.7em;
-		left: 0.125em;
-		top: 0.2em;
+		width: 28px;
+		left: 5px;
+		top: 8px;
 	}
 
 	.brand-mark b {
 		position: absolute;
-		inset: 0.6em auto auto 0.53em;
-		z-index: 1;
+		inset: 9px auto auto 8px;
 		color: #6b4caf;
-		font-size: 0.375em;
-		letter-spacing: -0.067em;
+		font-size: 15px;
+		letter-spacing: -1px;
+		z-index: 1;
+	}
+
+	.menu-button {
+		width: 44px;
+		height: 44px;
+		border: 0;
+		background: transparent;
+		display: grid;
+		place-items: center;
+	}
+
+	.menu-button img {
+		width: 33px;
+		height: 33px;
 	}
 
 	.page {
-		padding: 40px 0 80px;
+		width: min(1180px, calc(100% - 32px));
+		margin: 0 auto;
+		padding: 32px 0 72px;
 	}
 
 	.intro {
-		max-width: 680px;
+		max-width: 650px;
 		margin-bottom: 32px;
 	}
 
 	.eyebrow {
-		margin-bottom: 8px;
-		color: var(--color-brand-strong);
-		font-size: 14px;
-		font-weight: 600;
-		letter-spacing: 0.02em;
+		color: #563ac7;
+		font-family: 'Instrument Sans:Medium', sans-serif;
+		font-size: 16px;
+		font-variation-settings: 'wdth' 100;
+		margin-bottom: 6px;
 	}
 
 	.intro h1 {
-		font-family: var(--font-display);
-		font-size: clamp(32px, 4.6vw, 52px);
-		font-weight: 500;
-		letter-spacing: -0.025em;
-		line-height: 1.02;
-		text-wrap: balance;
+		max-width: 590px;
+		font-family: 'Kanit:Regular', sans-serif;
+		font-size: clamp(36px, 5.5vw, 60px);
+		font-weight: 400;
+		letter-spacing: -0.03em;
+		line-height: 0.95;
 	}
 
 	.intro-copy {
-		max-width: 60ch;
+		max-width: 600px;
 		margin-top: 14px;
-		color: var(--color-text-muted);
-		font-size: 16px;
-		line-height: 1.55;
+		color: #6f6b73;
+		font-family: 'Kanit:Regular', sans-serif;
+		font-size: 15px;
+		letter-spacing: -0.02em;
+		line-height: 1.15;
 	}
 
 	.workspace {
 		display: grid;
-		grid-template-columns: minmax(0, 1fr) minmax(340px, 400px);
+		grid-template-columns: minmax(0, 1.45fr) minmax(340px, 0.85fr);
 		gap: 24px;
 		align-items: start;
 	}
@@ -623,866 +566,729 @@
 		gap: 16px;
 	}
 
+	.card,
+	.results-card {
+		border: 1px solid rgba(57, 35, 97, 0.14);
+		border-radius: 16px;
+		background: rgba(235, 226, 255, 0.91);
+		box-shadow: 0 14px 34px rgba(49, 33, 84, 0.1);
+	}
+
 	.card {
-		padding: 24px;
-		border: 1px solid var(--color-border);
-		border-radius: var(--radius-card);
-		background: var(--color-surface);
-		box-shadow: var(--shadow-card);
+		padding: 18px;
 	}
 
-	.step-header {
-		display: flex;
-		align-items: flex-start;
-		gap: 12px;
-		margin-bottom: 20px;
-	}
-
-	.step-number {
-		width: 28px;
-		height: 28px;
-		flex: none;
-		border-radius: var(--radius-pill);
-		background: var(--color-brand-soft);
-		color: var(--color-brand-strong);
-		display: grid;
-		place-items: center;
-		font-size: 14px;
-		font-weight: 600;
-	}
-
-	.step-title {
-		font-family: var(--font-display);
-		font-size: 19px;
-		font-weight: 500;
-		line-height: 28px;
-	}
-
-	.step-description {
-		margin-top: 2px;
-		color: var(--color-text-muted);
-		font-size: 14px;
-		line-height: 1.45;
-	}
-
-	.field {
-		min-width: 0;
-		display: flex;
-		flex-direction: column;
-		gap: 6px;
-	}
-
-	legend.field-label {
-		margin-bottom: 6px;
-	}
-
-	.field-label {
-		padding: 0;
-		color: var(--color-text);
-		font-size: 14px;
-		font-weight: 500;
-	}
-
-	.optional {
-		color: var(--color-text-subtle);
-		font-weight: 400;
-	}
-
-	.control {
-		width: 100%;
-		min-width: 0;
-		height: var(--control-height);
-		border: 1px solid var(--color-border-strong);
-		border-radius: var(--radius-control);
-		background: var(--color-surface);
-		font-size: 16px;
-		font-variant-numeric: tabular-nums;
-		transition:
-			border-color 150ms ease,
-			box-shadow 150ms ease,
-			background-color 150ms ease;
-	}
-
-	input.control {
-		padding: 0 12px;
-	}
-
-	.control::placeholder,
-	.control input::placeholder {
-		color: var(--color-placeholder);
-	}
-
-	.control:hover {
-		border-color: var(--color-brand);
-	}
-
-	.control:focus-within {
-		border-color: var(--color-brand-strong);
-		box-shadow: var(--focus-ring);
-		outline: none;
-	}
-
-	.control:has(:user-invalid),
-	input.control:user-invalid {
-		border-color: var(--color-danger);
-	}
-
-	.number-control {
+	.investment-heading {
 		display: flex;
 		align-items: center;
-		gap: 6px;
-		padding: 0 12px;
-	}
-
-	.number-control input {
-		width: 100%;
-		min-width: 0;
-		height: 100%;
-		border: 0;
-		background: transparent;
-		appearance: textfield;
-	}
-
-	.number-control input:focus-visible {
-		outline: none;
-	}
-
-	.number-control input::-webkit-inner-spin-button,
-	.number-control input::-webkit-outer-spin-button {
-		margin: 0;
-		appearance: none;
-	}
-
-	.affix {
-		flex: none;
-		color: var(--color-text-subtle);
-		font-size: 14px;
-	}
-
-	.control-readonly {
-		padding: 0 12px;
-		border-style: dashed;
-		background: var(--color-surface-muted);
-		color: var(--color-brand-strong);
-		display: flex;
-		align-items: center;
-		font-weight: 600;
-	}
-
-	.control-readonly:hover {
-		border-color: var(--color-border-strong);
-	}
-
-	.hint {
-		margin-top: 16px;
-		padding: 10px 12px;
-		border-radius: var(--radius-control);
-		background: var(--color-surface-muted);
-		color: var(--color-text-muted);
-		font-size: 14px;
-		line-height: 1.45;
-	}
-
-	.product-grid {
-		display: grid;
-		grid-template-columns: minmax(0, 1fr) auto;
+		justify-content: space-between;
 		gap: 16px;
-		align-items: start;
+		margin-bottom: 10px;
+		font-family: 'Kanit:Regular', sans-serif;
+		font-size: 15px;
 	}
 
-	.segmented {
-		height: var(--control-height);
-		padding: 4px;
-		border-radius: var(--radius-control);
-		background: var(--color-brand-soft);
-		display: flex;
+	.tip {
+		display: inline-flex;
+		align-items: center;
 		gap: 4px;
-	}
-
-	.segmented label {
-		flex: 1;
-		position: relative;
-	}
-
-	.segmented input {
-		position: absolute;
-		inset: 0;
-		opacity: 0;
-		cursor: pointer;
-	}
-
-	.segmented span {
-		height: 100%;
-		padding: 0 16px;
-		border-radius: 7px;
-		color: var(--color-text-muted);
-		display: grid;
-		place-items: center;
-		font-size: 14px;
-		font-weight: 500;
 		white-space: nowrap;
+	}
+
+	.tip img {
+		width: 15px;
+		height: 15px;
+	}
+
+	.investment-controls {
+		display: grid;
+		grid-template-columns: minmax(160px, 1fr) auto;
+		gap: 10px;
+	}
+
+	.investment-controls > input,
+	.material-row > input,
+	.price-input,
+	.number-field {
+		min-width: 0;
+		border: 1px solid rgba(69, 49, 99, 0.2);
+		border-radius: 9px;
+		background: rgba(255, 255, 255, 0.3);
 		transition:
-			background-color 150ms ease,
-			color 150ms ease,
-			box-shadow 150ms ease;
+			border-color 160ms ease,
+			background 160ms ease;
 	}
 
-	.segmented label:hover span {
-		color: var(--color-text);
+	.investment-controls > input {
+		height: 44px;
+		padding: 0 13px;
 	}
 
-	.segmented input:checked + span {
-		background: var(--color-surface-raised);
-		color: var(--color-brand-strong);
-		box-shadow: var(--shadow-segment);
+	.investment-controls input:focus,
+	.material-row input:focus {
+		border-color: #7157b1;
+		background: rgba(255, 255, 255, 0.6);
 	}
 
-	.segmented input:focus-visible + span {
-		outline: 2px solid var(--color-brand-strong);
-		outline-offset: 1px;
+	.mode-switch {
+		display: flex;
+		padding: 3px;
+		border-radius: 10px;
+		background: #cbb9ed;
+	}
+
+	.mode-switch button {
+		padding: 0 14px;
+		border: 0;
+		border-radius: 8px;
+		background: transparent;
+		color: #594b68;
+		font-family: 'Kanit:Regular', sans-serif;
+		font-size: 13px;
+	}
+
+	.mode-switch button.active {
+		background: #fff;
+		color: #4c269f;
+		box-shadow: 0 2px 9px rgba(47, 25, 89, 0.12);
+	}
+
+	.helper {
+		margin-top: 8px;
+		color: #563ac7;
+		font-family: 'Kanit:Regular', sans-serif;
+		font-size: 12px;
+		text-align: right;
 	}
 
 	.batch-field {
-		max-width: 320px;
-		margin-top: 16px;
-		animation: reveal 200ms var(--ease-out);
+		display: flex;
+		align-items: center;
+		justify-content: flex-end;
+		gap: 10px;
+		margin-top: 10px;
+		color: #5e5668;
+		font-size: 12px;
+	}
+
+	.batch-field .number-field {
+		width: 110px;
+	}
+
+	.step-title {
+		display: flex;
+		align-items: flex-start;
+		gap: 9px;
+		margin-bottom: 14px;
+		font-family: 'Kanit:Regular', sans-serif;
+	}
+
+	.step-title > span:last-child {
+		display: flex;
+		flex-direction: column;
+	}
+
+	.step-title strong {
+		font-size: 15px;
+		font-weight: 400;
+		line-height: 1.1;
+	}
+
+	.step-title small {
+		margin-top: 2px;
+		color: #8c8791;
+		font-size: 11px;
+		line-height: 1.15;
+	}
+
+	.step-number {
+		position: relative;
+		width: 22px;
+		height: 22px;
+		flex: 0 0 22px;
+		display: grid;
+		place-items: center;
+		font-family: 'Kanit:Regular', sans-serif;
+		font-size: 12px;
+	}
+
+	.step-number img {
+		position: absolute;
+		width: 22px;
+		height: 22px;
+	}
+
+	.step-number b {
+		position: relative;
+		z-index: 1;
+		font-weight: 400;
 	}
 
 	.materials-header,
 	.material-row {
 		display: grid;
-		grid-template-columns:
-			minmax(140px, 1.8fr) minmax(84px, 0.8fr) minmax(108px, 1fr) minmax(96px, 0.9fr)
-			40px;
+		grid-template-columns: 34px minmax(125px, 1.6fr) minmax(82px, 0.7fr) minmax(100px, 0.8fr) 30px;
 		gap: 8px;
 		align-items: center;
 	}
 
 	.materials-header {
-		padding-bottom: 8px;
-		color: var(--color-text-subtle);
-		font-size: 13px;
-		font-weight: 500;
-	}
-
-	.align-end {
-		text-align: right;
+		padding: 0 4px 7px;
+		color: #554a62;
+		font-family: 'Inter:Semi Bold', sans-serif;
+		font-size: 11px;
+		text-align: center;
 	}
 
 	.materials-list {
 		display: grid;
-		gap: 8px;
+		gap: 7px;
 	}
 
 	.material-row {
-		animation: reveal 200ms var(--ease-out);
+		min-height: 44px;
 	}
 
-	.material-cell {
-		min-width: 0;
+	.material-row > b {
+		text-align: center;
+		font-family: 'Inter:Black', sans-serif;
+		font-size: 12px;
 	}
 
-	.cell-label {
-		display: none;
+	.material-row > input,
+	.price-input {
+		height: 42px;
 	}
 
-	.material-subtotal output {
-		display: block;
-		color: var(--color-text-muted);
-		font-size: 15px;
-		font-variant-numeric: tabular-nums;
-		text-align: right;
-		overflow-wrap: anywhere;
+	.material-row > input {
+		padding: 0 10px;
 	}
 
-	.icon-button {
-		width: 40px;
-		height: 40px;
-		border-radius: var(--radius-control);
-		color: var(--color-text-subtle);
-		display: grid;
-		place-items: center;
-		transition:
-			background-color 150ms ease,
-			color 150ms ease;
+	.material-row > input[type='number'] {
+		text-align: center;
 	}
 
-	.icon-button svg,
-	.ghost-button svg {
-		width: 18px;
-		height: 18px;
-		fill: none;
-		stroke: currentColor;
-		stroke-linecap: round;
-		stroke-width: 1.8;
-	}
-
-	.icon-button:hover:not(:disabled) {
-		background: var(--color-danger-soft);
-		color: var(--color-danger);
-	}
-
-	.icon-button:disabled {
-		opacity: 0.35;
-		cursor: not-allowed;
-	}
-
-	.materials-footer {
-		margin-top: 16px;
-		padding-top: 16px;
-		border-top: 1px solid var(--color-border);
+	.price-input,
+	.number-field {
 		display: flex;
-		flex-wrap: wrap;
 		align-items: center;
-		justify-content: space-between;
-		gap: 12px;
+		padding: 0 10px;
 	}
 
-	.ghost-button {
-		min-height: 40px;
-		padding: 0 14px;
-		border: 1px solid var(--color-border-strong);
-		border-radius: var(--radius-control);
-		background: var(--color-surface);
-		color: var(--color-brand-strong);
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-		gap: 6px;
-		font-size: 14px;
-		font-weight: 600;
-		white-space: nowrap;
-		transition:
-			background-color 150ms ease,
-			border-color 150ms ease;
+	.price-input span,
+	.number-field span {
+		color: #655a70;
+		font-size: 12px;
 	}
 
-	.ghost-button:hover:not(:disabled) {
-		border-color: var(--color-brand);
-		background: var(--color-brand-soft);
-	}
-
-	.ghost-button:disabled {
-		border-color: transparent;
+	.price-input input,
+	.number-field input {
+		width: 100%;
+		min-width: 0;
+		border: 0;
+		outline: 0;
 		background: transparent;
-		color: var(--color-text-subtle);
-		cursor: default;
 	}
 
-	.materials-total {
-		color: var(--color-text-muted);
-		font-size: 14px;
+	.price-input input {
+		height: 40px;
 	}
 
-	.materials-total strong {
-		margin-left: 8px;
-		color: var(--color-text);
-		font-size: 17px;
-		font-weight: 600;
-		font-variant-numeric: tabular-nums;
+	.remove-button {
+		width: 28px;
+		height: 28px;
+		border: 0;
+		border-radius: 50%;
+		background: rgba(113, 87, 177, 0.1);
+		color: #7157b1;
+		font-size: 20px;
+		line-height: 1;
+	}
+
+	.remove-button:hover:not(:disabled) {
+		background: #7157b1;
+		color: white;
+	}
+
+	.remove-button:disabled {
+		cursor: not-allowed;
+		opacity: 0.3;
+	}
+
+	.secondary-button {
+		min-height: 38px;
+		margin: 16px auto 0;
+		padding: 0 18px;
+		border: 0;
+		border-radius: 10px;
+		background: #c4acff;
+		color: #3c07ad;
+		display: flex;
+		align-items: center;
+		gap: 7px;
+		box-shadow: 0 4px 8px rgba(52, 27, 105, 0.18);
+		font-family: 'Kanit:Regular', sans-serif;
+		font-size: 12px;
+		text-transform: uppercase;
+	}
+
+	.secondary-button span {
+		font-size: 20px;
 	}
 
 	.labor-grid {
 		display: grid;
-		grid-template-columns: minmax(0, 1fr) 20px minmax(0, 1fr) 20px minmax(0, 1fr);
+		grid-template-columns: 1fr 18px 1fr 18px 1fr;
 		gap: 8px;
 		align-items: end;
+	}
+
+	.labor-grid > label,
+	.calculated-field {
+		min-width: 0;
+	}
+
+	.labor-grid > label > span,
+	.calculated-field > span,
+	.profit-field {
+		display: flex;
+		align-items: center;
+		gap: 5px;
+		margin-bottom: 6px;
+		font-family: 'Kanit:Regular', sans-serif;
+		font-size: 13px;
+	}
+
+	.labor-grid img {
+		width: 16px;
+		height: 16px;
+	}
+
+	.number-field {
+		height: 42px;
+	}
+
+	.number-field input {
+		height: 100%;
+		text-align: center;
 	}
 
 	.operator {
-		height: var(--control-height);
-		color: var(--color-text-subtle);
-		display: grid;
-		place-items: center;
-		font-size: 20px;
+		padding-bottom: 10px;
+		color: #7457b7;
+		font-size: 24px;
+		font-weight: 700;
+		text-align: center;
 	}
 
-	.profit-layout {
+	.calculated-field strong {
+		height: 42px;
+		border: 1px solid rgba(69, 49, 99, 0.2);
+		border-radius: 9px;
 		display: grid;
-		grid-template-columns: 200px minmax(0, 1fr);
-		gap: 16px;
-		align-items: end;
+		place-items: center;
+		color: #563ac7;
+		font-family: 'Inter:Semi Bold', sans-serif;
+		font-size: 13px;
 	}
 
 	.recommendation {
-		min-height: var(--control-height);
-		padding: 10px 10px 10px 14px;
-		border-radius: var(--radius-control);
-		background: var(--color-brand-soft);
+		margin-bottom: 14px;
+		padding: 12px 14px;
+		border: 1px solid rgba(86, 58, 199, 0.15);
+		border-radius: 12px;
+		background: rgba(196, 172, 255, 0.28);
 		display: flex;
 		align-items: center;
-		justify-content: space-between;
-		gap: 12px;
-	}
-
-	.recommendation p {
-		color: var(--color-text-muted);
-		font-size: 14px;
-		line-height: 1.45;
-	}
-
-	.recommendation strong {
-		display: block;
-		color: var(--color-brand-stronger);
-		font-weight: 600;
-	}
-
-	.recommendation .ghost-button {
-		flex: none;
-	}
-
-	.results {
-		position: sticky;
-		top: 24px;
-		scroll-margin-top: 16px;
-		overflow: hidden;
-		border: 1px solid var(--color-border);
-		border-radius: var(--radius-card);
-		background: var(--color-surface);
-		box-shadow: var(--shadow-card);
-	}
-
-	.results-hero {
-		padding: 24px;
-		background: var(--color-brand-surface);
-		color: var(--color-on-brand);
-	}
-
-	.results-label {
-		color: var(--color-brand-contrast);
-		font-size: 14px;
-		font-weight: 500;
-	}
-
-	.results-project {
-		margin-top: 2px;
-		color: var(--color-on-brand);
-		font-family: var(--font-display);
-		font-size: 18px;
-		overflow-wrap: anywhere;
-	}
-
-	.results-price {
-		margin-top: 8px;
-		font-family: var(--font-display);
-		font-size: clamp(40px, 5vw, 48px);
-		font-variant-numeric: tabular-nums;
-		font-weight: 500;
-		letter-spacing: -0.03em;
-		line-height: 1;
-		overflow-wrap: anywhere;
-	}
-
-	.results-price.is-empty {
-		opacity: 0.55;
-	}
-
-	.results-unit {
-		margin-top: 6px;
-		color: var(--color-brand-contrast);
-		display: flex;
-		flex-wrap: wrap;
-		gap: 4px 12px;
-		font-size: 14px;
-	}
-
-	.results-batch strong {
-		color: var(--color-on-brand);
-		font-weight: 600;
-		font-variant-numeric: tabular-nums;
-	}
-
-	.results-body {
-		padding: 24px;
-		animation: reveal 250ms var(--ease-out);
-	}
-
-	.results-subtitle {
-		margin-bottom: 12px;
-		font-family: var(--font-display);
-		font-size: 17px;
-		font-weight: 500;
-	}
-
-	.composition-bar {
-		height: 12px;
-		border-radius: var(--radius-pill);
-		background: var(--color-brand-soft);
-		display: flex;
-		gap: 2px;
-		overflow: hidden;
-	}
-
-	.segment {
-		height: 100%;
-		transition: width 400ms var(--ease-out);
-	}
-
-	.segment.materials,
-	.swatch.materials {
-		background: var(--color-materials-fill);
-	}
-
-	.segment.labor,
-	.swatch.labor {
-		background: var(--color-labor-fill);
-	}
-
-	.segment.profit,
-	.swatch.profit {
-		background: var(--color-profit-fill);
-	}
-
-	.breakdown {
-		margin-top: 16px;
-		font-size: 15px;
-	}
-
-	.breakdown-row {
-		padding: 8px 0;
-		display: flex;
-		align-items: baseline;
 		justify-content: space-between;
 		gap: 16px;
 	}
 
-	.breakdown-row dt {
-		color: var(--color-text-muted);
-		display: flex;
-		align-items: center;
-		gap: 8px;
+	.recommendation strong {
+		color: #49279b;
+		font-size: 13px;
 	}
 
-	.breakdown-row dd {
-		font-variant-numeric: tabular-nums;
-		font-weight: 500;
-		white-space: nowrap;
+	.recommendation p {
+		margin-top: 2px;
+		color: #71697a;
+		font-size: 11px;
 	}
 
-	.swatch {
-		width: 10px;
-		height: 10px;
-		flex: none;
-		border-radius: 3px;
-	}
-
-	.breakdown-row.is-subtotal,
-	.breakdown-row.is-total {
-		border-top: 1px solid var(--color-border);
-	}
-
-	.breakdown-row.is-subtotal dt {
-		color: var(--color-text);
-		font-weight: 500;
-	}
-
-	.breakdown-row.is-subtotal dd {
+	.recommendation button {
+		flex: 0 0 auto;
+		padding: 8px 11px;
+		border: 1px solid #7157b1;
+		border-radius: 8px;
+		background: transparent;
+		color: #563ac7;
+		font-size: 11px;
 		font-weight: 600;
 	}
 
-	.breakdown-row dd.is-profit {
-		color: var(--color-profit);
-		font-weight: 600;
+	.profit-field {
+		justify-content: space-between;
 	}
 
-	.breakdown-row.is-total {
-		margin-top: 4px;
-		padding-top: 14px;
-		border-top-color: var(--color-text);
-	}
-
-	.breakdown-row.is-total dt {
-		color: var(--color-text);
-		font-weight: 600;
-	}
-
-	.breakdown-row.is-total dd {
-		color: var(--color-brand-strong);
-		font-size: 19px;
-		font-weight: 700;
-	}
-
-	.results-empty {
-		padding: 24px;
-		color: var(--color-text-muted);
-		font-size: 14px;
-		line-height: 1.5;
-	}
-
-	.results-empty-title {
-		margin-bottom: 4px;
-		color: var(--color-text);
-		font-family: var(--font-display);
-		font-size: 17px;
-	}
-
-	.price-bar {
-		display: none;
+	.profit-field .number-field {
+		width: 130px;
+		margin: 0;
 	}
 
 	.primary-button {
-		min-height: 44px;
-		padding: 0 18px;
-		border-radius: var(--radius-control);
-		background: var(--color-brand-strong);
-		color: var(--color-on-accent);
+		width: 100%;
+		min-height: 48px;
+		margin-top: 12px;
+		border: 0;
+		border-radius: 12px;
+		background: #5d3bb2;
+		color: white;
+		box-shadow: 0 8px 18px rgba(67, 36, 135, 0.24);
+		font-family: 'Kanit:Regular', sans-serif;
 		font-size: 15px;
-		font-weight: 600;
-		white-space: nowrap;
-		transition: background-color 150ms ease;
 	}
 
-	.primary-button:hover {
-		background: var(--color-brand-stronger);
+	.primary-button:hover:not(:disabled) {
+		background: #4b299f;
+		transform: translateY(-1px);
 	}
 
-	@keyframes reveal {
+	.primary-button:disabled {
+		cursor: not-allowed;
+		opacity: 0.4;
+	}
+
+	.empty-note {
+		display: block;
+		margin-top: 8px;
+		color: #756c7e;
+		text-align: center;
+	}
+
+	.results-card {
+		position: sticky;
+		top: 20px;
+		overflow: hidden;
+		background: rgba(242, 236, 255, 0.94);
+	}
+
+	.results-heading {
+		min-height: 166px;
+		padding: 26px;
+		background: #7157b1;
+		color: white;
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+	}
+
+	.results-heading p {
+		color: #dfd3ff;
+		font-family: 'Kanit:Regular', sans-serif;
+		font-size: 14px;
+	}
+
+	.results-heading h2 {
+		margin-top: 3px;
+		font-family: 'Kanit:Regular', sans-serif;
+		font-size: 45px;
+		font-weight: 400;
+		letter-spacing: -0.04em;
+		line-height: 1;
+	}
+
+	.results-heading span {
+		color: #d5c8f5;
+		font-size: 11px;
+	}
+
+	.results-heading > img {
+		width: 58px;
+		height: 58px;
+		filter: invert(1);
+		opacity: 0.8;
+	}
+
+	.summary {
+		padding: 18px 22px;
+		border-bottom: 1px solid rgba(74, 52, 112, 0.12);
+		display: grid;
+		grid-template-columns: 1fr 1fr;
+		gap: 12px;
+	}
+
+	.summary div {
+		display: flex;
+		flex-direction: column;
+	}
+
+	.summary div + div {
+		padding-left: 14px;
+		border-left: 1px solid rgba(74, 52, 112, 0.15);
+	}
+
+	.summary span {
+		color: #746b7c;
+		font-size: 11px;
+	}
+
+	.summary strong {
+		margin-top: 3px;
+		color: #40247f;
+		font-family: 'Inter:Semi Bold', sans-serif;
+		font-size: 16px;
+	}
+
+	.chart {
+		padding: 22px;
+	}
+
+	.chart-title {
+		margin-bottom: 20px;
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+	}
+
+	.chart-title h3 {
+		font-family: 'Kanit:Regular', sans-serif;
+		font-size: 16px;
+		font-weight: 400;
+	}
+
+	.chart-title p {
+		color: #8c8394;
+		font-size: 10px;
+	}
+
+	.chart-title img {
+		width: 21px;
+		height: 21px;
+	}
+
+	.bar-row {
+		display: grid;
+		grid-template-columns: 70px 1fr 78px;
+		gap: 8px;
+		align-items: center;
+		margin: 13px 0;
+	}
+
+	.bar-row > span {
+		color: #645b6c;
+		font-size: 11px;
+	}
+
+	.bar-row > strong {
+		font-size: 11px;
+		text-align: right;
+	}
+
+	.bar-track {
+		height: 12px;
+		border-radius: 99px;
+		background: #ded3f1;
+		overflow: hidden;
+	}
+
+	.bar-fill {
+		height: 100%;
+		min-width: 0;
+		border-radius: inherit;
+		transition: width 650ms cubic-bezier(0.22, 1, 0.36, 1);
+	}
+
+	.bar-fill.investment {
+		background: #9d83d9;
+	}
+
+	.bar-fill.profit {
+		background: #49cfa6;
+	}
+
+	.bar-fill.total {
+		background: #563ac7;
+	}
+
+	.formula {
+		margin: 2px 22px 22px;
+		padding: 14px 10px 10px;
+		border-radius: 12px;
+		background: #e6dbfb;
+		display: grid;
+		grid-template-columns: 1fr auto 1fr auto 1fr;
+		gap: 5px;
+		align-items: center;
+		text-align: center;
+	}
+
+	.formula > span,
+	.formula > strong {
+		font-size: 11px;
+	}
+
+	.formula > b {
+		color: #7559b6;
+	}
+
+	.formula > small {
+		margin-top: 4px;
+		color: #7d7387;
+		font-size: 8px;
+	}
+
+	.formula > i {
+		display: block;
+	}
+
+	.result-project {
+		margin: -8px 22px 22px;
+		color: #6d6475;
+		font-size: 11px;
+		text-align: center;
+	}
+
+	.is-ready .results-heading h2 {
+		animation: result-in 420ms ease both;
+	}
+
+	@keyframes result-in {
 		from {
 			opacity: 0;
-			transform: translateY(-4px);
+			transform: translateY(8px);
 		}
 	}
 
-	@media (max-width: 960px) {
+	@media (max-width: 860px) {
 		.workspace {
-			grid-template-columns: minmax(0, 1fr);
+			grid-template-columns: 1fr;
 		}
 
-		.results {
+		.results-card {
 			position: static;
 		}
-
-		.page.has-price-bar {
-			padding-bottom: 120px;
-		}
-
-		:global(html:has(.price-bar.is-visible)) {
-			scroll-padding-bottom: 104px;
-		}
-
-		.price-bar {
-			position: fixed;
-			inset: auto 12px 12px;
-			z-index: 10;
-			padding: 10px 10px 10px 18px;
-			border: 1px solid var(--color-border);
-			border-radius: var(--radius-card);
-			background: var(--color-surface);
-			box-shadow: var(--shadow-raised);
-			display: flex;
-			align-items: center;
-			justify-content: space-between;
-			gap: 12px;
-			visibility: hidden;
-			opacity: 0;
-			transform: translateY(16px);
-			transition:
-				opacity 200ms ease,
-				transform 200ms var(--ease-out),
-				visibility 0s 200ms;
-		}
-
-		.price-bar.is-visible {
-			visibility: visible;
-			opacity: 1;
-			transform: none;
-			transition:
-				opacity 200ms ease,
-				transform 200ms var(--ease-out);
-		}
-
-		.price-bar-summary {
-			min-width: 0;
-			display: flex;
-			flex-direction: column;
-		}
-
-		.price-bar-summary span {
-			color: var(--color-text-muted);
-			font-size: 13px;
-		}
-
-		.price-bar-summary strong {
-			color: var(--color-brand-strong);
-			font-family: var(--font-display);
-			font-size: 22px;
-			font-variant-numeric: tabular-nums;
-			font-weight: 500;
-			line-height: 1.2;
-			overflow-wrap: anywhere;
-		}
 	}
 
-	@media (max-width: 720px) {
-		.product-grid,
-		.profit-layout {
-			grid-template-columns: minmax(0, 1fr);
+	@media (max-width: 600px) {
+		.topbar {
+			height: 109px;
+			padding-inline: 18px;
 		}
 
-		.materials-header {
-			display: none;
+		.brand {
+			font-size: 38px;
 		}
 
-		.materials-list {
-			gap: 0;
+		.page {
+			width: min(100% - 30px, 440px);
+			padding-top: 30px;
 		}
 
-		.material-row {
-			grid-template-columns: repeat(3, minmax(0, 1fr)) 40px;
-			grid-template-areas:
-				'name name name remove'
-				'quantity price subtotal subtotal';
-			gap: 8px;
-			padding: 14px 0;
-			border-bottom: 1px solid var(--color-border);
+		.intro {
+			margin-bottom: 36px;
 		}
 
-		.material-row:first-child {
-			padding-top: 0;
+		.intro h1 {
+			max-width: 390px;
+			font-size: 32px;
+			line-height: 0.91;
 		}
 
-		.material-row > :nth-child(1) {
-			grid-area: name;
+		.intro-copy {
+			font-size: 14px;
 		}
 
-		.material-row > :nth-child(2) {
-			grid-area: quantity;
+		.card {
+			padding: 14px;
+			border-radius: 11px;
 		}
 
-		.material-row > :nth-child(3) {
-			grid-area: price;
+		.investment-controls {
+			grid-template-columns: 1fr;
 		}
 
-		.material-row > :nth-child(4) {
-			grid-area: subtotal;
+		.mode-switch {
+			min-height: 42px;
 		}
 
-		.material-row > :nth-child(5) {
-			grid-area: remove;
-		}
-
-		.cell-label {
-			display: block;
-			margin-bottom: 4px;
-			color: var(--color-text-subtle);
-			font-size: 13px;
-		}
-
-		.material-subtotal {
-			align-self: stretch;
-			display: flex;
-			flex-direction: column;
-			align-items: flex-end;
-		}
-
-		.material-subtotal output {
+		.mode-switch button {
 			flex: 1;
-			display: flex;
-			align-items: center;
+			padding: 0 7px;
 		}
 
-		.materials-footer {
-			margin-top: 0;
-			border-top: 0;
+		.materials-card {
+			padding-inline: 10px;
+		}
+
+		.materials-header,
+		.material-row {
+			grid-template-columns: 24px minmax(88px, 1.45fr) minmax(63px, 0.75fr) minmax(
+					78px,
+					0.85fr
+				) 26px;
+			gap: 4px;
+		}
+
+		.material-row > input,
+		.price-input {
+			height: 40px;
+		}
+
+		.material-row > input {
+			padding-inline: 7px;
+		}
+
+		.price-input {
+			padding-inline: 6px;
+		}
+
+		.remove-button {
+			width: 25px;
+			height: 25px;
 		}
 
 		.labor-grid {
-			grid-template-columns: minmax(0, 1fr) 20px minmax(0, 1fr);
+			grid-template-columns: 1fr 14px 1fr;
 		}
 
 		.labor-grid > .operator:nth-of-type(2) {
 			display: none;
 		}
 
-		.labor-total {
+		.calculated-field {
 			grid-column: 1 / -1;
+			margin-top: 8px;
+		}
+
+		.recommendation {
+			align-items: flex-start;
+		}
+
+		.results-heading {
+			min-height: 150px;
+			padding: 22px;
+		}
+
+		.results-heading h2 {
+			font-size: 40px;
 		}
 	}
 
-	@media (max-width: 480px) {
-		.topbar-inner,
-		.page {
-			width: calc(100% - 32px);
-		}
-
-		.topbar {
-			border-radius: 0 0 20px 20px;
-		}
-
-		.topbar-inner {
-			height: 64px;
-		}
-
-		.brand {
-			font-size: 30px;
-		}
-
-		.page {
-			padding-top: 28px;
-		}
-
-		.intro {
-			margin-bottom: 24px;
-		}
-
-		.intro-copy {
-			font-size: 15px;
-		}
-
-		.card {
-			padding: 18px 16px;
-		}
-
-		.step-header {
-			margin-bottom: 16px;
-		}
-
-		.segmented span {
-			padding: 0 8px;
+	@media (max-width: 380px) {
+		.materials-header {
+			display: none;
 		}
 
 		.material-row {
-			grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr) 40px;
-			grid-template-areas:
-				'name name remove'
-				'quantity price price'
-				'subtotal subtotal subtotal';
+			grid-template-columns: 22px 1fr 64px 25px;
 		}
 
-		.material-subtotal {
-			flex-direction: row;
-			align-items: center;
-			justify-content: space-between;
-		}
-
-		.material-subtotal .cell-label {
-			margin: 0;
-		}
-
-		.material-subtotal output {
-			flex: none;
-		}
-
-		.materials-footer {
-			flex-direction: column-reverse;
-			align-items: stretch;
-		}
-
-		.materials-total {
-			display: flex;
-			justify-content: space-between;
+		.material-row .price-input {
+			grid-column: 2 / 4;
 		}
 
 		.recommendation {
 			flex-direction: column;
-			align-items: stretch;
-			padding: 12px;
-		}
-
-		.results-hero,
-		.results-body,
-		.results-empty {
-			padding: 20px;
 		}
 	}
 </style>
