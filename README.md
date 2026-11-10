@@ -23,3 +23,7 @@ El resultado queda en `build/`. Para servirlo bajo una subruta, define `BASE_PAT
 ## Despliegue
 
 Cada push a `main` ejecuta el workflow [`deploy.yml`](.github/workflows/deploy.yml), que compila el sitio y lo publica en GitHub Pages.
+
+## Versión Margen
+
+La versión visual revisada está disponible en [`/margen/`](https://erickgiber.github.io/calculadora-presupuesto/margen/) y su archivo autocontenido está en `static/margen/index.html`. Incluye inicio, formulario por pasos, total o detalle de materiales, filas con Enter, cálculo de margen, guardado local y fondo degradado. La aplicación Svelte original sigue disponible en la raíz.

@@ -26,6 +26,7 @@
 	const materialsStepIndex = STEPS.findIndex((step) => step.id === 'materials');
 	const calculatorHref = resolve('/');
 	const historyHref = resolve('/historial');
+	const margenHref = `${calculatorHref.replace(/\/$/, '')}/margen/`;
 
 	let isLoaded = $state(false);
 	let calculationId = $state(newCalculationId());
@@ -151,6 +152,7 @@
 		onBack={stepIndex > 0 ? goBack : undefined}
 	>
 		{#snippet actions()}
+			<a href={margenHref} class="version-link">Nueva versión</a>
 			<a
 				class="icon-button history-link"
 				href={historyHref}
@@ -302,6 +304,7 @@
 </div>
 
 <style>
+	.version-link { color: var(--color-on-brand); font-size: 13px; padding: 10px; text-decoration: underline; text-underline-offset: 3px; }
 	.history-link {
 		color: var(--color-brand-contrast);
 	}
