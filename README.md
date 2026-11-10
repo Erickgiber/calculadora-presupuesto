@@ -2,7 +2,7 @@
 
 Calculadora para fijar el precio de venta de un producto a partir de sus materiales, la mano de obra y el margen de ganancia deseado.
 
-Construida con SvelteKit y Tailwind CSS, se compila como una SPA estática y se publica en GitHub Pages.
+La aplicación es el archivo autocontenido `static/index.html`, que se publica en la raíz del sitio. Incluye inicio, formulario por pasos con producción por unidad o por lote, total o detalle de materiales, filas con Enter, cálculo de margen, guardado local y plantillas visuales. SvelteKit se usa como paso de build para generar el sitio estático que se publica en GitHub Pages.
 
 ## Desarrollo
 
@@ -24,6 +24,4 @@ El resultado queda en `build/`. Para servirlo bajo una subruta, define `BASE_PAT
 
 Cada push a `main` ejecuta el workflow [`deploy.yml`](.github/workflows/deploy.yml), que compila el sitio y lo publica en GitHub Pages.
 
-## Versión Margen
-
-La versión visual revisada está disponible en [`/margen/`](https://erickgiber.github.io/calculadora-presupuesto/margen/) y su archivo autocontenido está en `static/margen/index.html`. Incluye inicio, formulario por pasos, total o detalle de materiales, filas con Enter, cálculo de margen, guardado local y fondo degradado. La aplicación Svelte original sigue disponible en la raíz.
+La ruta anterior `/margen/` redirige a la raíz para no romper enlaces existentes.
