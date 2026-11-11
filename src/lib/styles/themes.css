@@ -1,0 +1,168 @@
+:root,
+:root[data-design='clasica'][data-theme='light'] {
+	--app-surface: #fff;
+	--app-soft: #efe1ff;
+	--app-text: #352044;
+	--app-muted: #756183;
+	--app-line: #dfc7ef;
+	--app-input: #fcf8ff;
+	--app-accent: #7718ba;
+	--app-start: #f1ebfb;
+	--app-end: #bba6dc;
+	--app-header: #654b8b;
+	--brand-end: #dfc5ff;
+}
+
+:root[data-design='clasica'][data-theme='dark'] {
+	--app-surface: #291c39;
+	--app-soft: #3b2550;
+	--app-text: #f3e6ff;
+	--app-muted: #cbb4df;
+	--app-line: #573d6c;
+	--app-input: #1d1429;
+	--app-accent: #d6a8ff;
+	--app-start: #3c2356;
+	--app-end: #190f27;
+	--app-header: #3c2356;
+	--brand-end: #dfc5ff;
+}
+
+:root[data-design='costura'][data-theme='light'] {
+	--app-surface: #fffcf8;
+	--app-soft: #fff0df;
+	--app-text: #492d19;
+	--app-muted: #795c48;
+	--app-line: #e8c9aa;
+	--app-input: #fff9f1;
+	--app-accent: #96500c;
+	--app-start: #faf0e4;
+	--app-end: #d6b18d;
+	--app-header: #805a38;
+	--brand-end: #ffd4a1;
+}
+
+:root[data-design='costura'][data-theme='dark'] {
+	--app-surface: #302319;
+	--app-soft: #49301e;
+	--app-text: #fff0df;
+	--app-muted: #d9bda4;
+	--app-line: #6a482d;
+	--app-input: #251b13;
+	--app-accent: #ffc47b;
+	--app-start: #443020;
+	--app-end: #21160f;
+	--app-header: #443020;
+	--brand-end: #ffd4a1;
+}
+
+:root[data-design='reposteria'][data-theme='light'] {
+	--app-surface: #fffbff;
+	--app-soft: #fbe5fc;
+	--app-text: #49244c;
+	--app-muted: #805c83;
+	--app-line: #e8c5eb;
+	--app-input: #fff6ff;
+	--app-accent: #a01da8;
+	--app-start: #fcedf6;
+	--app-end: #ddb5d5;
+	--app-header: #8b4e78;
+	--brand-end: #ffc8e8;
+}
+
+:root[data-design='reposteria'][data-theme='dark'] {
+	--app-surface: #302035;
+	--app-soft: #49284f;
+	--app-text: #fce8ff;
+	--app-muted: #d6b5dd;
+	--app-line: #66416f;
+	--app-input: #25172a;
+	--app-accent: #f3a5ff;
+	--app-start: #45264d;
+	--app-end: #211226;
+	--app-header: #45264d;
+	--brand-end: #ffc8e8;
+}
+
+:root[data-design='manualidades'][data-theme='light'] {
+	--app-surface: #fbfff9;
+	--app-soft: #e4efdf;
+	--app-text: #2b402d;
+	--app-muted: #607561;
+	--app-line: #c6dac2;
+	--app-input: #f6fcf3;
+	--app-accent: #3d7240;
+	--app-start: #eff4e9;
+	--app-end: #b4c9ab;
+	--app-header: #4d7050;
+	--brand-end: #cae3b8;
+}
+
+:root[data-design='manualidades'][data-theme='dark'] {
+	--app-surface: #202d23;
+	--app-soft: #2c4032;
+	--app-text: #e8f5df;
+	--app-muted: #b5cdb0;
+	--app-line: #44604a;
+	--app-input: #17211b;
+	--app-accent: #b1dba8;
+	--app-start: #2c4431;
+	--app-end: #132019;
+	--app-header: #2c4431;
+	--brand-end: #cae3b8;
+}
+
+:root[data-design='arte'][data-theme='light'] {
+	--app-surface: #fcfdff;
+	--app-soft: #e6edff;
+	--app-text: #263453;
+	--app-muted: #5d6c89;
+	--app-line: #c7d4f2;
+	--app-input: #f7f9ff;
+	--app-accent: #1747b8;
+	--app-start: #eef2fc;
+	--app-end: #aec2e3;
+	--app-header: #41628d;
+	--brand-end: #bcd4ff;
+}
+
+:root[data-design='arte'][data-theme='dark'] {
+	--app-surface: #1d2538;
+	--app-soft: #293755;
+	--app-text: #e7edff;
+	--app-muted: #b7c5e3;
+	--app-line: #40537a;
+	--app-input: #151c2c;
+	--app-accent: #a7c1ff;
+	--app-start: #25385c;
+	--app-end: #101a30;
+	--app-header: #25385c;
+	--brand-end: #bcd4ff;
+}
+
+:root[data-design='minimal'][data-theme='light'] {
+	--app-surface: #fff;
+	--app-soft: #ededee;
+	--app-text: #303033;
+	--app-muted: #6c6b71;
+	--app-line: #d6d4db;
+	--app-input: #fafafa;
+	--app-accent: #525057;
+	--app-start: #f4f3f5;
+	--app-end: #c4c1c9;
+	--app-header: #56515e;
+	--brand-end: #ded8e8;
+}
+
+:root[data-design='minimal'][data-theme='dark'] {
+	--app-surface: #252426;
+	--app-soft: #353338;
+	--app-text: #f2eff5;
+	--app-muted: #c4c0ca;
+	--app-line: #514d58;
+	--app-input: #1c1b1e;
+	--app-accent: #cfccd6;
+	--app-start: #35333a;
+	--app-end: #19181c;
+	--app-header: #35333a;
+	--brand-end: #ded8e8;
+}

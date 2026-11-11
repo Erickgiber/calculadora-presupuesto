@@ -1,0 +1,28 @@
+:root {
+	--app-pattern: none;
+	--pattern-clasica: url('data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22160%22%20height%3D%22140%22%20viewBox%3D%220%200%20160%20140%22%20fill%3D%22none%22%20stroke%3D%22%23715744%22%20stroke-width%3D%221.4%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Crect%20x%3D%2213%22%20y%3D%2218%22%20width%3D%2249%22%20height%3D%2228%22%20rx%3D%224%22%2F%3E%3Ccircle%20cx%3D%2237%22%20cy%3D%2232%22%20r%3D%227%22%2F%3E%3Cpath%20d%3D%22M19%2025h5m27%2014h5M35%2027h4m-4%205h4m-4%205h4M37%2025v14%22%2F%3E%3Ccircle%20cx%3D%22111%22%20cy%3D%22100%22%20r%3D%2215%22%2F%3E%3Ccircle%20cx%3D%22111%22%20cy%3D%22100%22%20r%3D%2210%22%2F%3E%3Cpath%20d%3D%22M114%2094h-5q-6%203%202%206t-2%206h-3m5-15v18M22%20105l9-9%208%205%2013-18m-9%201%2010-2-1%2010%22%2F%3E%3C%2Fsvg%3E');
+	--pattern-costura: url('data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22160%22%20height%3D%22140%22%20viewBox%3D%220%200%20160%20140%22%20fill%3D%22none%22%20stroke%3D%22%23715744%22%20stroke-width%3D%221.4%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Ccircle%20cx%3D%2230%22%20cy%3D%2232%22%20r%3D%2213%22%2F%3E%3Ccircle%20cx%3D%2226%22%20cy%3D%2228%22%20r%3D%221%22%2F%3E%3Ccircle%20cx%3D%2234%22%20cy%3D%2228%22%20r%3D%221%22%2F%3E%3Ccircle%20cx%3D%2226%22%20cy%3D%2236%22%20r%3D%221%22%2F%3E%3Ccircle%20cx%3D%2234%22%20cy%3D%2236%22%20r%3D%221%22%2F%3E%3Cpath%20d%3D%22M106%2020l-26%2047%206-4%2023-41zM106%2024l-3%205M16%20102h43m-38-7v14m8-14v14m8-14v14m8-14v14m8-14v14M91%2099q12-18%2025%200t25%200%22%2F%3E%3Cpath%20stroke-dasharray%3D%223%206%22%20d%3D%22M0%2075h160M70%200v140%22%2F%3E%3C%2Fsvg%3E');
+	--pattern-reposteria: url('data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22160%22%20height%3D%22140%22%20viewBox%3D%220%200%20160%20140%22%20fill%3D%22none%22%20stroke%3D%22%23715744%22%20stroke-width%3D%221.4%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M17%2040h32l-5%2021H22zM15%2039q-4-12%208-14-1-13%2012-12%2011%200%2010%2013%2013%200%209%2013zM25%2045l2%2011m8-11v11m8-11-2%2011M100%2095h28v18h-28zM96%2094h36M102%2087q4-7%208%200t8%200t8%200M114%2081v-8m-2-4q-2-5%202-8%205%204%202%208zM89%2027l27%2020m-25-25q-8%200-9%208%203%2010%2012%2011%208-4%205-11z%22%2F%3E%3C%2Fsvg%3E');
+	--pattern-manualidades: url('data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22160%22%20height%3D%22140%22%20viewBox%3D%220%200%20160%20140%22%20fill%3D%22none%22%20stroke%3D%22%23715744%22%20stroke-width%3D%221.4%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Ccircle%20cx%3D%2220%22%20cy%3D%2230%22%20r%3D%226%22%2F%3E%3Ccircle%20cx%3D%2220%22%20cy%3D%2248%22%20r%3D%226%22%2F%3E%3Cpath%20d%3D%22M25%2033l30%2023M25%2045l30-23M38%2039h1M98%2091l20-25%206%205-20%2025zM99%2092q-12-1-11%2013%2012%200%2013-11M85%2024h33l14%2014v18H85zM118%2024v14h14M24%20101l11-6%2023%2010-11%2018-23-10zM29%20104l15%206m-4-8%2010%205%22%2F%3E%3C%2Fsvg%3E');
+	--pattern-arte: url('data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22160%22%20height%3D%22140%22%20viewBox%3D%220%200%20160%20140%22%20fill%3D%22none%22%20stroke%3D%22%23536789%22%20stroke-width%3D%221.4%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M24%2054q-17-1-15-20%201-22%2025-24%2023-1%2026%2019%201%2010-11%2010h-8q-8%201-6%207%203%2010-11%208z%22%2F%3E%3Ccircle%20cx%3D%2221%22%20cy%3D%2226%22%20r%3D%223%22%2F%3E%3Ccircle%20cx%3D%2234%22%20cy%3D%2221%22%20r%3D%223%22%2F%3E%3Ccircle%20cx%3D%2246%22%20cy%3D%2227%22%20r%3D%223%22%2F%3E%3Cpath%20d%3D%22M90%20100l22-31%207%205-23%2031zM92%20101q-12-2-11%2012%2013%201%2014-10M25%20102q10-15%2019%200t20%200M108%2022l7%208m-7%200%207-8M132%20111h10m-5-5v10%22%2F%3E%3C%2Fsvg%3E');
+}
+
+:root[data-design='clasica'] {
+	--app-pattern: var(--pattern-clasica);
+}
+
+:root[data-design='costura'] {
+	--app-pattern: var(--pattern-costura);
+}
+
+:root[data-design='reposteria'] {
+	--app-pattern: var(--pattern-reposteria);
+}
+
+:root[data-design='manualidades'] {
+	--app-pattern: var(--pattern-manualidades);
+}
+
+:root[data-design='arte'] {
+	--app-pattern: var(--pattern-arte);
+}
